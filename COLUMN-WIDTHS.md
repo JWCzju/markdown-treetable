@@ -40,3 +40,12 @@ all embedded third-party renderers. Legacy width spans are not converted. A stal
 source snapshot during a drag cancels its write instead of overwriting new content.
 
 Follow-up: removed nested wrapper scrolling; Live Preview uses the existing outer cm-table-widget. Verified wide table has horizontal scrolling only and narrow table has no redundant scrollbar.
+
+Full-height drag follow-up: resize hit regions extend from the header through the
+last table row. Default grip chrome removed; hover/drag uses a one-pixel accent line.
+ResizeObserver updates hit-region height as wrapping changes. Commit applies the
+new layout synchronously and a pre-paint MutationObserver handles recreated native
+tables, eliminating the previous debounced/interval-sized gap. Native drag from
+near the bottom boundary changed 306 to 351. Forty-five animation-frame samples
+across release all measured 350.993px with no missing table frame. Screenshot
+/tmp/full-column-grip.png inspected; sandbox only.
