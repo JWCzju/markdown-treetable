@@ -136,6 +136,14 @@ class CellOutline {
     this.plugin = plugin;
     this.editors = new Map();
     this.previews = new Set();
+    this.foldActions = new WeakMap();
+    for (const type of ['pointerdown', 'mousedown', 'click']) plugin.registerDomEvent(document, type, event => {
+      const marker = event.target.closest?.('.mte-cell-fold-hit');
+      const action = marker && this.foldActions.get(marker);
+      if (!action || event.button !== 0) return;
+      event.preventDefault(); event.stopImmediatePropagation();
+      if (type === 'pointerdown') action();
+    }, true);
     plugin.registerDomEvent(document, 'keydown', event => this.key(event), true);
     const command=plugin.app.commands.commands['editor:toggle-checklist-status'];
     if(command?.checkCallback) {
@@ -157,6 +165,14 @@ class CellOutline {
   }
   enabled(view) { return this.plugin.cellMarkdownGlobal || /<!--\s*cell-markdown\s*-->/.test(view.editor?.getValue() || ''); }
   scan(view) {
+    for (const table of view.containerEl.querySelectorAll('table:not(.table-editor)')) {
+      for (const li of table.querySelectorAll('td li')) {
+        const child=li.querySelector(':scope > ul, :scope > ol'); if(!child || li.dataset.mteFoldBound) continue;
+        li.dataset.mteFoldBound='1'; li.classList.add('mte-reading-fold-parent');
+        li.addEventListener('click', e=>{ if(e.target===li.firstChild || e.target.closest('.list-bullet')) { e.stopPropagation(); child.hidden=!child.hidden; li.classList.toggle('mte-reading-fold-closed',child.hidden); } });
+      }
+    }
+
     for (const [cm] of this.editors) if (cm.destroyed) this.editors.delete(cm);
     for (const entry of this.previews) if (!entry.wrapper.isConnected || !entry.wrapper.querySelector('.mte-outline-preview-line')) this.previews.delete(entry);
     if (!this.enabled(view)) return;
@@ -197,13 +213,20 @@ class CellOutline {
             return document.createTextNode(value);
           });
           if (item) {
-            const key=foldKey(view,wrapper,i); hasChildren=!item.task && lines.slice(i+1).some(t=>node(t)?.depth>item.depth); isClosed=!!this.plugin.cellFolds[key];
+            const key=foldKey(view,wrapper,i); hasChildren=!item.task && !/^\d/.test(item.marker) && (node(lines[i+1] || '')?.depth > item.depth); isClosed=hasChildren && !!this.plugin.cellFolds[key];
             if (hiddenDepth !== null && item.depth <= hiddenDepth) hiddenDepth = null;
             if (hiddenDepth !== null) line.classList.add('mte-cell-fold-hidden');
             if (hasChildren) { line.classList.add('mte-cell-fold-parent'); line.classList.toggle('mte-cell-fold-closed',isClosed); }
             line.style.cssText = outlineStyle(item.depth,ancestorDepths(lines,i));
             const bullet = document.createElement('span'); bullet.className = 'mte-outline-marker'; bullet.textContent = /^\d/.test(item.marker) ? item.marker + ' ' : '• ';
-            if (hasChildren) { bullet.classList.add('mte-cell-fold-hit'); bullet.addEventListener('pointerdown', e=>{e.preventDefault();e.stopPropagation();}); bullet.addEventListener('click', e=>{e.preventDefault();e.stopPropagation(); if(this.plugin.cellFolds[key]) delete this.plugin.cellFolds[key]; else this.plugin.cellFolds[key]=true; this.plugin.saveState(); wrapper.querySelectorAll('.mte-cell-fold-hidden').forEach(el=>el.classList.remove('mte-cell-fold-hidden')); line.classList.toggle('mte-cell-fold-closed',!!this.plugin.cellFolds[key]); this.plugin.schedule();}); }
+            if (hasChildren) {
+              bullet.classList.add('mte-cell-fold-hit');
+              this.foldActions.set(bullet, () => {
+                if(this.plugin.cellFolds[key]) delete this.plugin.cellFolds[key]; else this.plugin.cellFolds[key]=true;
+                this.applyFolds(view, wrapper, lines);
+                this.plugin.saveState();
+              });
+            }
             if (/^\d/.test(item.marker)) bullet.classList.add('mte-outline-ordered');
             if (item.task) {
               line.classList.add('mte-outline-task');
@@ -234,6 +257,21 @@ class CellOutline {
     cm.dispatch({ effects: require('@codemirror/state').StateEffect.appendConfig.of(compartment.of([service, codeFolding(), bullets])) });
     cm.dom.classList.add('mte-outline-editor');
     this.editors.set(cm, compartment);
+  }
+  applyFolds(view, wrapper, lines) {
+    let hiddenDepth = null;
+    [...wrapper.querySelectorAll(':scope > .mte-outline-preview-line')].forEach((line, i) => {
+      const item = node(lines[i]);
+      if (item && hiddenDepth !== null && item.depth <= hiddenDepth) hiddenDepth = null;
+      const hidden = hiddenDepth !== null;
+      const parent = item && !item.task && !/^\d/.test(item.marker) && node(lines[i+1] || '')?.depth > item.depth;
+      const closed = !!parent && !!this.plugin.cellFolds[foldKey(view, wrapper, i)];
+      line.classList.toggle('mte-cell-fold-hidden', hidden);
+      line.classList.toggle('mte-cell-fold-closed', closed);
+      const marker = line.querySelector('.mte-cell-fold-hit');
+      if (marker) marker.setAttribute('aria-expanded', String(!closed));
+      if (!hidden && closed) hiddenDepth = item.depth;
+    });
   }
   togglePreview(view, wrapper, itemIndex, checked) {
     const td=wrapper.closest('td'); const table=td?.closest('table.table-editor');

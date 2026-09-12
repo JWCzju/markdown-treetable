@@ -180,3 +180,16 @@ body .markdown-preview-view table.mte-grouped > tbody > tr.mte-group > td:not(:f
   display: inline-block;
   vertical-align: top;
 }
+
+.mte-reading-fold-parent { cursor:pointer; }
+.mte-reading-fold-parent.mte-reading-fold-closed::marker { color:var(--interactive-accent); font-size:1.25em; }
+/* Collapsed cell outliner marker mirrors the body outliner affordance. */
+.mte-outline-preview-line.mte-cell-fold-closed .mte-cell-fold-hit {
+  color: var(--interactive-accent) !important;
+  font-size: 1.25em !important;
+  line-height: .8 !important;
+  text-shadow: 0 0 0 var(--interactive-accent);
+  background: color-mix(in srgb, var(--interactive-accent) 14%, transparent);
+  border-radius: 50%;
+  box-shadow: 0 0 0 .22em color-mix(in srgb, var(--interactive-accent) 18%, transparent);
+}
