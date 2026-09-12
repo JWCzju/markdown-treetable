@@ -62,9 +62,7 @@ class MyTableExtended extends Plugin {
       for (const leaf of this.app.workspace.getLeavesOfType('markdown')) {
         const view = leaf.view;
         const cm = view.editor?.cm;
-        // Live Preview exposes table-editor DOM while getMode() may report
-        // "preview"; rely on the presence of CodeMirror instead of mode.
-        if (!cm || !view.file) continue;
+        if (!cm || view.getMode?.() !== 'source' || !view.file) continue;
         this.cellOutline.scan(view);
         const model = parse(cm.state.doc.toString(), view.file.path, {autoDetect: this.autoDetectTree});
         for (const element of view.containerEl.querySelectorAll('table.table-editor')) {
@@ -80,7 +78,6 @@ class MyTableExtended extends Plugin {
         for (const element of view.containerEl.querySelectorAll('table.table-editor:not(.mte-table)')) {
           const first = element.querySelector('tbody > tr > td')?.textContent?.trim() || '';
           const count = element.querySelectorAll('tbody > tr').length;
-          if (!/^(?:#{1,3}\s+|>+\s+)/.test(first)) continue;
           const candidate = model.find(t => t.rows.length === count && t.rows[0]?.cells[0] === first);
           if (candidate) this.decorate(element, candidate);
         }
@@ -106,7 +103,9 @@ class MyTableExtended extends Plugin {
   decorate(element, table) {
     // Rich embeds can settle asynchronously after the Markdown cell is mounted.
     // Preserve the current DOM until every image has a stable intrinsic size.
-    const pending = [...element.querySelectorAll('.internal-embed img:not([complete])')];
+    // complete is an HTMLImageElement property, not an HTML attribute. Cached
+    // images have already fired load and must never block table decoration.
+    const pending = [...element.querySelectorAll('.internal-embed img')].filter(img => !img.complete);
     if (pending.length) {
       for (const img of pending) if (!this.imageLoads.has(img)) {
         this.imageLoads.add(img);
