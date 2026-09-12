@@ -43,7 +43,22 @@ class MyTableExtended extends Plugin {
     this.registerEvent(this.app.workspace.on('editor-change', () => this.schedule()));
     this.registerDomEvent(document, 'compositionstart', () => { this.composing = true; }, true);
     this.registerDomEvent(document, 'compositionend', () => { this.composing = false; this.schedule(); }, true);
-    this.registerDomEvent(document, 'pointerdown', event => this.onToggle(event), true);
+    this.selectionPointer = null;
+    this.registerDomEvent(document, 'pointerdown', event => {
+      this.selectionPointer = null;
+      if (event.button === 0 && !event.shiftKey && !event.target.closest?.('.table-row-drag-handle, .table-col-drag-handle, .mte-toggle')) {
+        const cell = event.target.closest?.('table.mte-table td, table.mte-table th');
+        if (cell) this.selectionPointer = {cell, x: event.clientX, y: event.clientY};
+      }
+      this.onToggle(event);
+    }, true);
+    this.registerDomEvent(document, 'pointermove', event => {
+      if (this.selectionPointer) { this.selectionPointer.x = event.clientX; this.selectionPointer.y = event.clientY; }
+    }, true);
+    for (const type of ['pointerup', 'pointercancel']) this.registerDomEvent(document, type, () => {
+      const pointer = this.selectionPointer;
+      setTimeout(() => { if (this.selectionPointer === pointer) this.selectionPointer = null; }, 0);
+    }, true);
     for (const type of ['mousedown', 'click']) this.registerDomEvent(document, type, event => {
       if (event.target.closest?.('.mte-toggle')) { event.preventDefault(); event.stopImmediatePropagation(); }
     }, true);
@@ -84,6 +99,9 @@ class MyTableExtended extends Plugin {
         const view = leaf.view;
         const cm = view.editor?.cm;
         if (!cm || view.getMode?.() !== 'source' || !view.file) continue;
+        // Undo-close can expose a leaf with a file but an empty editor before
+        // loading its source. This is not an external edit of the stored note.
+        if (!cm.state.doc.length) continue;
         this.foldMemory.sync(view.file.path, cm.state.doc.toString());
         this.cellOutline.scan(view);
         this.columnWidths.scan(view);
@@ -197,16 +215,8 @@ class MyTableExtended extends Plugin {
 
   guardTextSelection(element) {
     if (!element.classList.contains('table-editor')) return;
-    for (const cell of element.querySelectorAll('tbody td')) {
-      if (this.textSelectionGuards.has(cell)) continue;
-      const guard = event => {
-        if (event.button !== 0 || event.target.closest?.('.mte-toggle, .cm-editor, input, textarea')) return;
-        event.stopPropagation();
-      };
-      cell.addEventListener('pointerdown', guard, true);
-      cell.addEventListener('mousedown', guard, true);
-      this.textSelectionGuards.set(cell, guard);
-    }
+    // Native pointer handlers remain active; selectCells only rejects an
+    // in-cell text drag, never row/column handles or a drag across cells.
   }
 
   hidePrefixes(element, table) {
@@ -304,8 +314,12 @@ class MyTableExtended extends Plugin {
     if (typeof table.selectCells === 'function') {
       const original = table.selectCells;
       originals.selectCells = original;
+      const plugin = this;
       table.selectCells = function (anchor, head, dragging) {
-        if (this.tableEl.classList.contains('mte-table')) {
+        const pointer = plugin.selectionPointer;
+        const rect = pointer?.cell.getBoundingClientRect();
+        if (!dragging && pointer && this.tableEl.contains(pointer.cell) &&
+          pointer.x >= rect.left && pointer.x < rect.right && pointer.y >= rect.top && pointer.y < rect.bottom) {
           this.deselectCells?.();
           return;
         }
