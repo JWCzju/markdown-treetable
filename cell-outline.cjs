@@ -155,17 +155,35 @@ class CellOutline {
       table.classList.add('mte-outline-table');
       for (const wrapper of table.querySelectorAll('.table-cell-wrapper')) {
         if (wrapper.querySelector('.cm-editor')) continue;
-        // Only decorate plain text + BR. Leave links, HTML and other widgets to Obsidian.
-        if ([...wrapper.childNodes].some(n => n.nodeType !== 3 && n.nodeName !== 'BR')) continue;
-        const lines = []; let current = '';
-        for (const n of wrapper.childNodes) { if (n.nodeName === 'BR') { lines.push(current); current = ''; } else current += n.textContent; }
-        lines.push(current);
+        // Preserve native inline nodes (including image embeds and their handlers).
+        // Block widgets such as details and embedded notes remain owned by Obsidian.
+        if ([...wrapper.childNodes].some(n => n.nodeType !== 3 &&
+          !(n.nodeType === 1 && (n.matches('br, a, strong, em, b, i, del, s, code, mark, img') ||
+            (n.matches('span') && (!n.classList.contains('internal-embed') || n.classList.contains('image-embed'))))))) continue;
+        const parts = [[]];
+        for (const child of wrapper.childNodes) {
+          if (child.nodeName === 'BR') parts.push([]);
+          else parts[parts.length - 1].push(child);
+        }
+        // Parse only the leading text, never text inside links or rich widgets.
+        const lines = parts.map(nodes => {
+          let text = '';
+          for (const child of nodes) { if (child.nodeType !== 3) break; text += child.textContent; }
+          return text;
+        });
         if (!lines.some(text => node(text))) continue;
         const original = [...wrapper.childNodes];
         wrapper.replaceChildren();
         lines.forEach((text, i) => {
           const line = document.createElement('span'); line.className = 'mte-outline-preview-line';
           const item = node(text);
+          let skip = item ? item.indent.length + item.marker.length + 1 + (item.task ? 4 : 0) : 0;
+          const bodyNodes = parts[i].map(child => {
+            if (child.nodeType !== 3) return child;
+            const value = child.textContent.slice(skip);
+            skip = Math.max(0, skip - child.textContent.length);
+            return document.createTextNode(value);
+          });
           if (item) {
             line.style.cssText = outlineStyle(item.depth,ancestorDepths(lines,i));
             const bullet = document.createElement('span'); bullet.className = 'mte-outline-marker'; bullet.textContent = item.indent + item.marker + ' ';
@@ -177,11 +195,11 @@ class CellOutline {
               box.addEventListener('pointerdown', e=>e.stopPropagation());
               box.addEventListener('mousedown', e=>{e.preventDefault();e.stopPropagation();});
               box.addEventListener('click', e=>{e.stopPropagation();this.togglePreview(view, wrapper, i, item.checked);});
-              const body=document.createElement('span'); body.className='mte-task-body'; body.textContent=item.body.slice(4);
+              const body=document.createElement('span'); body.className='mte-task-body'; body.append(...bodyNodes);
               const slot=document.createElement('span'); slot.className='mte-task-slot'; slot.append(box);
               line.append(slot,body);
-            } else line.append(bullet, document.createTextNode(item.body));
-          } else line.textContent = text;
+            } else line.append(bullet, ...bodyNodes);
+          } else line.append(...bodyNodes);
           wrapper.append(line); if (i < lines.length - 1) wrapper.append(document.createElement('br'));
         });
         this.previews.add({ wrapper, original });
