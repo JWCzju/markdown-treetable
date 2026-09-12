@@ -1,0 +1,78 @@
+# My Table Extended
+
+## Groups
+
+Use `# Group`, `#- Collapsed group`, or `#+ Expanded group` in the hierarchy column. A group contains all following rows until the next group or table end. Objects within a group remain ordinary root rows; `>` still denotes actual children. Only one group level is supported. Group rows keep native editable cells and use a subtle background and bold text. Export/clear fold-state commands include groups and preserve the `#` marker.
+
+Add a comment immediately before a Markdown table:
+
+```md
+<!-- tree-table column=0 -->
+
+| Q | Description |
+| --- | --- |
+| Parent | ... |
+| > Child | ... |
+| >>- Grandchild, collapsed by default | ... |
+| >>+ Grandchild, expanded by default | ... |
+```
+
+`>` encodes depth. `-` encodes a portable default-collapsed state, and `+` encodes a portable default-expanded state. Without `+` or `-`, click state is saved in the plugin data for that vault. Use **Write current tree-table fold state to Markdown** to make current clicks portable.
+
+`column=0` is the zero-based hierarchy column and is recommended for short tables. `column="0"` is equivalent. A column name such as `column="Q"` remains supported. The `id="ideas"` attribute is optional; omit it unless you want a stable table identity when headings or root labels change.
+
+The plugin does not rewrite Markdown when folding. It enhances only activated tables and leaves ordinary tables alone.
+
+## State and compatibility
+
+- Clicks are remembered locally even on explicitly marked rows. Changing that row's `+`/`-` marker resets the remembered override.
+- Top-level rows use `- Parent` / `+ Parent`. The state applies to descendants, not the row itself.
+- Without an ID, tables are identified by their order among tree tables in the note, so editing object text does not reset unrelated folds. An optional unique table ID (`<!-- tree-table column="Q" id="ideas" -->`) keeps identity stable when tables are reordered. Row identity uses group and ancestor labels; renaming or moving that row can reset its own remembered state. Duplicate paths are distinguished by occurrence order.
+- Dragging over rendered cell text creates a normal text selection instead of native multi-cell selection. Use keyboard navigation to enter the native cell editor.
+- Commands operate on tree tables in the current note. The export/clear commands require editing mode and support native undo.
+- Desktop Obsidian 1.13.7 was tested. Navigation uses a small native-table adapter and may require updates after Obsidian changes its editor internals.
+- Tree-aware dragging and sorting are not included. Plain table drag is blocked; native sorting is guarded when the table adapter is active. Move entire subtrees in source mode.
+
+## Validation (2026-09-10)
+
+Passed: 5 model tests (including escaped pipes, fenced examples, invalid hierarchy, duplicate identity and 200 rows), actual Chromium click/reload persistence, unchanged source on fold, export with one-step undo, reading/live rendering, marker removal cleanup, reverse Tab and vertical boundary navigation, Chromium composition commit/cancel/undo, and Sandbox runtime smoke test. Screenshot: `/tmp/my-table-extended-acceptance.png`.
+
+The macOS input-method candidate popup and large-table visual performance were not separately tested. The 200-row check covers parsing only.
+
+## Experimental cell outline (Sandbox only)
+
+Add `<!-- cell-markdown -->` to opt the current note into the experiment.
+The native Obsidian table cell editor remains responsible for text, selection,
+IME and saving; list lines are stored using the native `<br>` representation.
+No dependency on `outliner-extended` is required.
+
+- Plain unordered list previews and active editors display bullets and hanging indents.
+- Enter creates the next list node; empty nodes outdent/exit the list.
+- Shift+Enter inserts an indented continuation line.
+- Tab / Shift+Tab indent / outdent the current subtree.
+- Option+Enter / Option+Tab append a sibling / child after the subtree.
+- Cmd/Ctrl+Option+Left / Right fold / unfold the active node.
+
+This is an experiment, not general block Markdown support: HTML/rich-content
+previews are left native; checkbox widgets, fenced code blocks, reading-view
+integration and fold persistence across cell editor lifetimes are not implemented.
+Cell navigation via Tab is retained for ordinary non-list cells. Private native
+cell editor access is guarded and must be revalidated after Obsidian updates.
+
+Validation: Sandbox native pointer activation and CDP keyboard sequences verified
+Enter adds a list item without a table row, Tab/Shift+Tab round-trip, Shift+Enter
+continuation and native `<br>` save. Native fold placeholder observed. Long Chinese
+list wrapping inspected in actual Electron screenshots. Existing 8 tree-model
+tests pass. No production promotion performed.
+
+### Checkbox experiment update
+Native `- [ ]` and `- [x]` tasks now have checkbox widgets in plain-cell previews
+and active editors. Click writes the native marker; indentation follows list depth.
+Enter and structural insertion preserve task type and create unchecked tasks.
+A settings toggle enables cell enhancement for all live-preview tables; it defaults
+to off while this experiment is being evaluated. Tree-row auto-detection is not enabled.
+
+Validation caught and corrected a one-character replacement range overflow on empty
+tasks. Sandbox reload and fresh error check pass after the correction. Preview click
+and Enter persistence were observed; full uninterrupted interaction acceptance remains
+necessary before promotion. Reading-view checkbox support remains outside this build.

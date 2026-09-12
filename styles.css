@@ -1,0 +1,151 @@
+.mte-table .mte-hidden { display: none !important; }
+
+body .markdown-source-view.mod-cm6 table.table-editor.mte-table > tbody > tr > td.mte-cell,
+body .markdown-preview-view table.mte-table > tbody > tr > td.mte-cell,
+body table.table-editor.mte-table > tbody > tr > td.mte-cell {
+  position: relative;
+  padding-left: calc(28px + var(--mte-inset, 0px) + var(--mte-depth, 0) * 22px) !important;
+}
+
+.mte-table .mte-prefix { display: none; }
+.mte-table .mte-group-prefix { display: none; }
+body table.mte-table > tbody > tr.mte-group > td {
+  background: color-mix(in srgb, var(--mte-header-color, var(--background-secondary)) 50%, var(--background-primary));
+  border-top: 1px solid var(--background-modifier-border);
+  font-weight: 600;
+}
+
+body .mte-table button.mte-toggle {
+  position: absolute;
+  left: calc(5px + var(--mte-inset, 0px) + var(--mte-depth, 0) * 22px);
+  top: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-normal);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+body .mte-table button.mte-toggle:hover { background: var(--background-modifier-hover); }
+body .mte-table button.mte-toggle svg { width: 19px; height: 19px; stroke-width: 3; }
+
+body table.mte-grouped > tbody > tr:not(.mte-group) { --mte-inset: 1.5em; }
+body table.mte-grouped > tbody > tr:not(.mte-group) > td:first-child {
+  position: relative;
+}
+/* Cover only the leading segment of object-row rules; retain native cells. */
+body table.mte-grouped > tbody > tr:not(.mte-group) > td:first-child::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: -1px;
+  bottom: -1px;
+  width: 1.5em;
+  background: var(--background-primary);
+  pointer-events: none;
+  z-index: 1;
+}
+body .markdown-source-view.mod-cm6 table.table-editor.mte-grouped > tbody > tr.mte-group > td:not(:last-child),
+body table.table-editor.mte-grouped > tbody > tr.mte-group > td:not(:last-child),
+body .markdown-preview-view table.mte-grouped > tbody > tr.mte-group > td:not(:last-child) {
+  border-right-style: hidden !important;
+}
+body .markdown-source-view.mod-cm6 table.table-editor.mte-grouped > tbody > tr.mte-group > td:not(:first-child),
+body table.table-editor.mte-grouped > tbody > tr.mte-group > td:not(:first-child),
+body .markdown-preview-view table.mte-grouped > tbody > tr.mte-group > td:not(:first-child) {
+  border-left-style: hidden !important;
+}
+
+/* Experimental opt-in cell Markdown. Native cell editor remains the input owner. */
+.mte-outline-preview-line { white-space: pre-wrap; }
+.mte-outline-marker:not(.mte-outline-ordered) { font-size: 0; }
+.mte-outline-marker:not(.mte-outline-ordered)::before { content: '• '; font-size: var(--font-text-size); color: var(--text-faint); }
+.mte-outline-editor .cm-formatting-list-ul { color: var(--text-faint); }
+.mte-outline-table .table-cell-wrapper { line-height: var(--line-height-normal); }
+
+/* Hanging indent: soft-wrapped lines align with the item's body, at every depth. */
+.mte-outline-preview-line, .mte-outline-editor .mte-outline-edit-line {
+  display: block;
+  padding-inline-start: calc(var(--mte-outline-indent, 0em) + 1.2em) !important;
+  text-indent: -1.2em !important;
+}
+.mte-outline-preview-line + br { display: none; }
+.mte-outline-marker:not(.mte-outline-ordered) {
+  display: inline-block;
+  width: 1.2rem;
+  text-indent: 0;
+  white-space: nowrap;
+  font-size: 0 !important;
+}
+.mte-outline-marker:not(.mte-outline-ordered) span { font-size: 0 !important; }
+.mte-outline-marker .cm-hmd-list-indent { display: none; }
+.mte-outline-marker:not(.mte-outline-ordered)::before {
+  display: inline-block;
+  width: 1.2rem;
+  text-indent: 0;
+}
+
+.mte-outline-bullet-widget { display:inline-block; width:1.2em; text-indent:0; color:var(--text-faint); }
+.mte-outline-editor .cm-line { line-height:var(--line-height-normal); }
+
+.mte-task-box { width: 1em; height: 1em; margin: 0 .2em 0 0 !important; vertical-align: baseline; text-indent:0; cursor:pointer; }
+
+/* Match native task spacing and completed-task appearance. */
+.mte-outline-task { --mte-task-prefix: 1.35em;
+  padding-inline-start: calc(var(--mte-outline-indent, 0em) + var(--mte-task-prefix)) !important;
+  text-indent: calc(-1 * var(--mte-task-prefix)) !important;
+}
+.mte-outline-task .mte-task-box { margin-inline-end: .65em !important; }
+.mte-outline-preview-line.mte-outline-task-done .mte-task-body,
+.mte-outline-editor .mte-outline-task-done {
+  color: var(--text-muted);
+  text-decoration: var(--checklist-done-decoration, line-through);
+}
+
+/* Match Obsidian list dots: use a geometric dot, not the font's bullet glyph. */
+.mte-outline-marker:not(.mte-outline-ordered)::before {
+  content:''; width:var(--list-bullet-size,.3em); height:var(--list-bullet-size,.3em);
+  border-radius:var(--list-bullet-radius,50%); background-color:var(--list-marker-color,var(--text-faint));
+  vertical-align:middle; margin-inline-start:.15rem;
+}
+.mte-outline-bullet-widget { font-size:0; width:1.2rem; }
+.mte-outline-bullet-widget::before {
+  content:''; display:inline-block; width:var(--list-bullet-size,4.8px); height:var(--list-bullet-size,4.8px);
+  border-radius:var(--list-bullet-radius,50%); background-color:var(--list-marker-color,var(--text-faint));
+  vertical-align:middle; margin-inline-start:.15rem;
+}
+
+/* Shared marker slot: native caret starts after the slot, including on empty tasks. */
+.mte-outline-preview-line, .mte-outline-editor .mte-outline-edit-line {
+  padding-inline-start: calc(var(--mte-outline-indent, 0em) + 1.35em) !important;
+  text-indent: -1.35em !important;
+  background-image: none !important;
+}
+.mte-task-slot, .mte-outline-bullet-widget, .mte-outline-marker:not(.mte-outline-ordered) {
+  display:inline-block; box-sizing:border-box; width:1.35em;
+  font-size:inherit !important; text-indent:0; vertical-align:baseline;
+}
+.mte-task-slot { line-height:inherit; }
+.mte-task-slot .mte-task-box { margin:0 !important; vertical-align:-.1em; }
+.mte-outline-marker:not(.mte-outline-ordered), .mte-outline-bullet-widget { color:transparent; position:relative; }
+.mte-outline-marker:not(.mte-outline-ordered)::before, .mte-outline-bullet-widget::before {
+  position:absolute; left:.15em; top:50%; transform:translateY(-50%); margin:0;
+}
+.mte-outline-editor .cm-indent::before, .mte-outline-editor .cm-indent::after { display:none !important; }
+
+/* Group headings: # / ## / ### map to one, two and three visual levels. */
+.mte-group .mte-group-prefix { display:none; }
+
+/* Keep rich embeds from changing a row's inline baseline while loading. */
+.mte-table .internal-embed.image-embed { display:inline-block; vertical-align:top; }
+.mte-table .internal-embed.image-embed img { max-width:100%; height:auto; vertical-align:top; }
