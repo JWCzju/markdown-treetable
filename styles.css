@@ -180,3 +180,6 @@ body .markdown-preview-view table.mte-grouped > tbody > tr.mte-group > td:not(:f
   display: inline-block;
   vertical-align: top;
 }
+
+.mte-reading-fold-parent { cursor:pointer; }
+.mte-reading-fold-parent.mte-reading-fold-closed::marker { color:var(--interactive-accent); font-size:1.25em; }

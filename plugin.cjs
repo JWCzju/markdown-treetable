@@ -1,14 +1,32 @@
 const { Plugin, Notice, setIcon, PluginSettingTab, Setting } = require('obsidian');
 const { parse, folded, visibility } = require('./model.cjs');
 const { ColumnWidths } = require('./column-widths.cjs');
+const { FoldMemory } = require('./fold-memory.cjs');
+const { EditorView } = require('@codemirror/view');
 const { CellOutline } = require('./cell-outline.cjs');
 
 class MyTableExtended extends Plugin {
   async onload() {
     const saved = await this.loadData();
-    this.states = saved?.states || {};
+    this.states = {};
+    this.legacyFoldState = saved?.legacyFoldState || {states: saved?.states || {}, cellFolds: saved?.cellFolds || {}};
+    this.foldMemory = new FoldMemory(saved?.foldMemory, () => {
+      clearTimeout(this.memorySaveTimer);
+      this.memorySaveTimer = setTimeout(() => this.saveState(), 200);
+    });
+    this.registerEditorExtension(EditorView.updateListener.of(update => {
+      if (!update.docChanged) return;
+      const view = this.app.workspace.getLeavesOfType('markdown').map(l => l.view).find(v => v.editor?.cm === update.view);
+      if (!view?.file) return;
+      const changes = [];
+      update.changes.iterChanges((from, to, _a, _b, insert) => changes.push({from, to, insert: insert.toString()}));
+      this.foldMemory.update(view.file.path, update.startState.doc.toString(), update.state.doc.toString(), changes, update.transactions.some(t => t.isUserEvent('set')));
+    }));
+    this.registerEvent(this.app.vault.on('rename', (file, oldPath) => {
+      this.foldMemory.rename(oldPath, file.path); this.reading?.clear(); this.schedule();
+    }));
+    this.registerEvent(this.app.vault.on('delete', file => this.foldMemory.remove(file.path)));
     this.cellMarkdownGlobal = saved?.cellMarkdownGlobal ?? true;
-    this.cellFolds = saved?.cellFolds || {};
     this.autoDetectTree = saved?.autoDetectTree ?? true;
     this.addSettingTab(new CellSettings(this.app, this));
     this.adapters = new Map();
@@ -66,9 +84,10 @@ class MyTableExtended extends Plugin {
         const view = leaf.view;
         const cm = view.editor?.cm;
         if (!cm || view.getMode?.() !== 'source' || !view.file) continue;
+        this.foldMemory.sync(view.file.path, cm.state.doc.toString());
         this.cellOutline.scan(view);
         this.columnWidths.scan(view);
-        const model = parse(cm.state.doc.toString(), view.file.path, {autoDetect: this.autoDetectTree});
+        const model = this.memoryTables(cm.state.doc.toString(), view.file.path);
         for (const element of view.containerEl.querySelectorAll('table.table-editor')) {
           try {
             const start = cm.state.doc.lineAt(cm.posAtDOM(element)).number - 1;
@@ -92,7 +111,7 @@ class MyTableExtended extends Plugin {
   async decorateReading(el, ctx) {
     const file = this.app.vault.getAbstractFileByPath(ctx.sourcePath);
     if (!file) return;
-    const candidates = parse(await this.app.vault.cachedRead(file), ctx.sourcePath, {autoDetect: this.autoDetectTree});
+    const candidates = this.memoryTables(await this.app.vault.cachedRead(file), ctx.sourcePath);
     if (this.unloaded) return;
     for (const element of el.querySelectorAll('table')) {
       const section = ctx.getSectionInfo(element);
@@ -102,6 +121,16 @@ class MyTableExtended extends Plugin {
         candidates.find(candidate => candidate.rows.length === count && candidate.rows[0]?.cells[0] === first && candidate.valid);
       if (table) { this.reading.set(element, table); this.schedule(); }
     }
+  }
+
+  memoryTables(source, path) {
+    const nodes = this.foldMemory.sync(path, source);
+    const tables = parse(source, path, {autoDetect: this.autoDetectTree});
+    for (const table of tables) for (const row of table.rows) {
+      row.memory = nodes.find(n => n.kind === 'tree' && n.rowKey === row.key);
+      if (row.memory) this.states[row.key] = {closed: this.foldMemory.get(path, row.memory), explicit: row.explicit};
+    }
+    return tables;
   }
 
   decorate(element, table) {
@@ -152,6 +181,8 @@ class MyTableExtended extends Plugin {
       button.dataset.key = row.key;
       button.dataset.explicit = row.explicit;
       button.dataset.table = table.identity;
+      button.dataset.path = table.path;
+      if (row.memory) button.dataset.memoryPos = String(row.memory.pos);
       setIcon(button, closed ? 'chevron-right' : 'chevron-down');
       button.title = closed ? '展开子项' : '折叠子项';
       button.setAttribute('aria-label', closed ? '展开子项' : '折叠子项');
@@ -236,6 +267,10 @@ class MyTableExtended extends Plugin {
     document.activeElement?.blur?.();
     const current = this.states[button.dataset.key];
     const closed = current?.explicit === button.dataset.explicit ? !current.closed : button.getAttribute('aria-expanded') === 'true';
+    const path = button.dataset.path;
+    const cached = this.foldMemory.cache.get(path);
+    const node = cached?.nodes.find(n => n.kind === 'tree' && n.pos === Number(button.dataset.memoryPos));
+    if (!cached || !this.foldMemory.set(path, cached.source, node, closed)) return;
     this.states[button.dataset.key] = { closed, explicit: button.dataset.explicit };
     this.saveState();
     this.schedule();
@@ -291,7 +326,7 @@ class MyTableExtended extends Plugin {
   }
 
   saveState() {
-    const data = JSON.parse(JSON.stringify({ states: this.states, cellMarkdownGlobal: this.cellMarkdownGlobal, cellFolds: this.cellFolds }));
+    const data = JSON.parse(JSON.stringify({ foldMemory: this.foldMemory.data, legacyFoldState: this.legacyFoldState, cellMarkdownGlobal: this.cellMarkdownGlobal, autoDetectTree: this.autoDetectTree }));
     this.saveQueue = (this.saveQueue || Promise.resolve()).then(() => this.saveData(data)).catch(error => console.error('My Table Extended: state save failed', error));
     return this.saveQueue;
   }
@@ -300,7 +335,7 @@ class MyTableExtended extends Plugin {
     if (!view?.file || this.composing) return;
     const source = view.getMode() === 'source' ? view.editor.getValue() : await this.app.vault.cachedRead(view.file);
     document.activeElement?.blur?.();
-    for (const table of parse(source, view.file.path).filter(t => t.valid)) for (const row of table.rows) if (row.hasChildren && row.unique) this.states[row.key] = { closed, explicit: row.explicit };
+    for (const table of this.memoryTables(source, view.file.path).filter(t => t.valid)) for (const row of table.rows) if (row.memory) this.foldMemory.set(view.file.path, source, row.memory, closed);
     await this.saveState();
     this.schedule();
   }
@@ -313,7 +348,7 @@ class MyTableExtended extends Plugin {
   writeFoldState(checking) {
     const active = this.activeSource();
     if (!active) return false;
-    const tables = parse(active.source, active.file.path).filter(table => table.valid);
+    const tables = this.memoryTables(active.source, active.file.path).filter(table => table.valid);
     const candidates = tables.flatMap(table => table.rows.filter(row => row.hasChildren && row.writable && row.unique));
     if (!candidates.length) return false;
     if (checking) return true;
@@ -325,7 +360,7 @@ class MyTableExtended extends Plugin {
   clearExplicitMarkers(checking) {
     const active = this.activeSource();
     if (!active) return false;
-    const tables = parse(active.source, active.file.path).filter(table => table.valid);
+    const tables = this.memoryTables(active.source, active.file.path).filter(table => table.valid);
     const candidates = tables.flatMap(table => table.rows.filter(row => row.explicit && row.writable));
     if (!candidates.length) return false;
     if (checking) return true;
@@ -343,6 +378,8 @@ class MyTableExtended extends Plugin {
 
   onunload() {
     this.unloaded = true;
+    clearTimeout(this.memorySaveTimer);
+    this.saveState();
     this.cellOutline.destroy();
     this.columnWidths.destroy();
     this.observer.disconnect();
@@ -358,7 +395,7 @@ class CellSettings extends PluginSettingTab {
     this.containerEl.empty();
     new Setting(this.containerEl).setName('所有表格启用 cell 列表和待办增强').setDesc('关闭时，仅增强包含 <!-- cell-markdown --> 的笔记。开关会重新加载插件以清理编辑器装饰。').addToggle(toggle=>toggle.setValue(this.plugin.cellMarkdownGlobal).onChange(async value=>{
       this.plugin.cellMarkdownGlobal=value;
-      await this.plugin.saveData({states:this.plugin.states,cellMarkdownGlobal:value});
+      await this.plugin.saveState();
       const id=this.plugin.manifest.id;
       await this.app.plugins.disablePlugin(id); await this.app.plugins.enablePlugin(id);
     }));
