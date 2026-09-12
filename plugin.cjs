@@ -1,5 +1,6 @@
 const { Plugin, Notice, setIcon, PluginSettingTab, Setting } = require('obsidian');
 const { parse, folded, visibility } = require('./model.cjs');
+const { ColumnWidths } = require('./column-widths.cjs');
 const { CellOutline } = require('./cell-outline.cjs');
 
 class MyTableExtended extends Plugin {
@@ -11,6 +12,7 @@ class MyTableExtended extends Plugin {
     this.addSettingTab(new CellSettings(this.app, this));
     this.adapters = new Map();
     this.cellOutline = new CellOutline(this);
+    this.columnWidths = new ColumnWidths(this);
     this.textSelectionGuards = new Map();
     this.reading = new Map();
     this.composing = false;
@@ -66,6 +68,7 @@ class MyTableExtended extends Plugin {
         // "preview"; rely on the presence of CodeMirror instead of mode.
         if (!cm || !view.file) continue;
         this.cellOutline.scan(view);
+        this.columnWidths.scan(view);
         const model = parse(cm.state.doc.toString(), view.file.path, {autoDetect: this.autoDetectTree});
         for (const element of view.containerEl.querySelectorAll('table.table-editor')) {
           try {
@@ -341,6 +344,7 @@ class MyTableExtended extends Plugin {
   onunload() {
     this.unloaded = true;
     this.cellOutline.destroy();
+    this.columnWidths.destroy();
     this.observer.disconnect();
     clearTimeout(this.timer);
     for (const [table, originals] of this.adapters) Object.assign(table, originals);
