@@ -8,6 +8,7 @@ class MyTableExtended extends Plugin {
     const saved = await this.loadData();
     this.states = saved?.states || {};
     this.cellMarkdownGlobal = saved?.cellMarkdownGlobal ?? true;
+    this.cellFolds = saved?.cellFolds || {};
     this.autoDetectTree = saved?.autoDetectTree ?? true;
     this.addSettingTab(new CellSettings(this.app, this));
     this.adapters = new Map();
@@ -290,7 +291,7 @@ class MyTableExtended extends Plugin {
   }
 
   saveState() {
-    const data = JSON.parse(JSON.stringify({ states: this.states, cellMarkdownGlobal: this.cellMarkdownGlobal }));
+    const data = JSON.parse(JSON.stringify({ states: this.states, cellMarkdownGlobal: this.cellMarkdownGlobal, cellFolds: this.cellFolds }));
     this.saveQueue = (this.saveQueue || Promise.resolve()).then(() => this.saveData(data)).catch(error => console.error('My Table Extended: state save failed', error));
     return this.saveQueue;
   }

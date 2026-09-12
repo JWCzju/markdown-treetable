@@ -149,3 +149,34 @@ body .markdown-preview-view table.mte-grouped > tbody > tr.mte-group > td:not(:f
 /* Keep rich embeds from changing a row's inline baseline while loading. */
 .mte-table .internal-embed.image-embed { display:inline-block; vertical-align:top; }
 .mte-table .internal-embed.image-embed img { max-width:100%; height:auto; vertical-align:top; }
+
+.mte-cell-fold-parent { cursor:pointer; }
+.mte-cell-fold-parent::before { content:''; display:inline-block; width:.34em; height:.34em; border-radius:50%; background:var(--text-faint); vertical-align:middle; margin-inline-end:.45em; }
+.mte-cell-fold-closed::before { background:var(--interactive-accent); box-shadow:0 0 0 .14em color-mix(in srgb,var(--interactive-accent) 18%,transparent); }
+/* Cell outliner visual baseline: one native-size marker, no guide rails or extra slot. */
+.mte-outline-preview-line { background-image:none !important; padding-inline-start:calc(var(--mte-outline-indent,0em) + 1.35em) !important; text-indent:-1.35em !important; }
+.mte-outline-marker:not(.mte-outline-ordered), .mte-outline-bullet-widget { width:1.35em !important; font-size:0 !important; }
+.mte-outline-marker:not(.mte-outline-ordered)::before, .mte-outline-bullet-widget::before { content:'•' !important; position:static !important; transform:none !important; display:inline !important; width:auto !important; height:auto !important; margin:0 !important; color:var(--text-faint) !important; font-size:var(--font-text-size) !important; }
+.mte-cell-fold-parent::before { display:none !important; }
+.mte-cell-fold-closed .mte-outline-marker:not(.mte-outline-ordered)::before { color:var(--interactive-accent) !important; font-size:1.15em !important; }
+.mte-outline-task { padding-inline-start:calc(var(--mte-outline-indent,0em) + 1.35em) !important; text-indent:-1.35em !important; }
+.mte-task-slot { width:1.35em !important; }
+/* Final marker reset: never render a stretched pseudo element. */
+.mte-outline-marker:not(.mte-outline-ordered)::before,
+.mte-outline-bullet-widget::before { display:none !important; content:none !important; }
+.mte-outline-marker:not(.mte-outline-ordered) { width:1.35em !important; color:var(--text-faint) !important; font-size:var(--font-text-size) !important; position:static !important; }
+.mte-outline-preview-line.mte-cell-fold-closed .mte-outline-marker:not(.mte-outline-ordered) { color:var(--interactive-accent) !important; font-size:1.15em !important; }
+.mte-outline-preview-line.mte-cell-fold-parent { cursor:pointer; }
+
+.mte-cell-fold-hidden { display:none !important; }
+
+.mte-cell-fold-hit { cursor:pointer; user-select:none; }
+.mte-cell-fold-closed .mte-cell-fold-hit { color:var(--interactive-accent) !important; font-size:1.15em !important; }
+
+/* Rich inline embeds must not inherit the list's negative hanging indent. */
+.mte-outline-preview-line .internal-embed.image-embed,
+.mte-outline-edit-line .internal-embed.image-embed {
+  text-indent: 0 !important;
+  display: inline-block;
+  vertical-align: top;
+}

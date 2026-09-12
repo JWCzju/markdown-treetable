@@ -73,6 +73,14 @@ function contextNode(doc, number) {
   }
   return null;
 }
+function moveOrdered(view, down) {
+  const line=view.state.doc.lineAt(view.state.selection.main.head), n=node(line.text);
+  if (!n || !/^\d+[.)]$/.test(n.marker)) return false;
+  const targetNo=line.number+(down?1:-1); if(targetNo<1||targetNo>view.state.doc.lines)return false;
+  const other=node(view.state.doc.line(targetNo).text); if(!other||other.depth!==n.depth||!/^\d+[.)]$/.test(other.marker))return false;
+  const a=line.text.replace(n.marker,other.marker), b=view.state.doc.line(targetNo).text.replace(other.marker,n.marker);
+  view.dispatch({changes:[{from:line.from,to:line.to,insert:b},{from:view.state.doc.line(targetNo).from,to:view.state.doc.line(targetNo).to,insert:a}],userEvent:'input.move'}); return true;
+}
 function toggleTask(view) {
   const line = view.state.doc.lineAt(view.state.selection.main.head); const n = node(line.text);
   if (!n) {
@@ -122,6 +130,7 @@ function indent(view, out) {
   if (changes.length) view.dispatch({ changes, userEvent: 'input.indent', scrollIntoView: true });
   return true;
 }
+function foldKey(view, wrapper, index) { return String(view.file?.path)+"|"+String([...view.containerEl.querySelectorAll(".table-cell-wrapper")].indexOf(wrapper))+"|"+index; }
 class CellOutline {
   constructor(plugin) {
     this.plugin = plugin;
@@ -174,9 +183,12 @@ class CellOutline {
         if (!lines.some(text => node(text))) continue;
         const original = [...wrapper.childNodes];
         wrapper.replaceChildren();
+        let hiddenDepth = null;
         lines.forEach((text, i) => {
           const line = document.createElement('span'); line.className = 'mte-outline-preview-line';
           const item = node(text);
+          let isClosed = false;
+          let hasChildren = false;
           let skip = item ? item.indent.length + item.marker.length + 1 + (item.task ? 4 : 0) : 0;
           const bodyNodes = parts[i].map(child => {
             if (child.nodeType !== 3) return child;
@@ -185,8 +197,13 @@ class CellOutline {
             return document.createTextNode(value);
           });
           if (item) {
+            const key=foldKey(view,wrapper,i); hasChildren=!item.task && lines.slice(i+1).some(t=>node(t)?.depth>item.depth); isClosed=!!this.plugin.cellFolds[key];
+            if (hiddenDepth !== null && item.depth <= hiddenDepth) hiddenDepth = null;
+            if (hiddenDepth !== null) line.classList.add('mte-cell-fold-hidden');
+            if (hasChildren) { line.classList.add('mte-cell-fold-parent'); line.classList.toggle('mte-cell-fold-closed',isClosed); }
             line.style.cssText = outlineStyle(item.depth,ancestorDepths(lines,i));
-            const bullet = document.createElement('span'); bullet.className = 'mte-outline-marker'; bullet.textContent = item.indent + item.marker + ' ';
+            const bullet = document.createElement('span'); bullet.className = 'mte-outline-marker'; bullet.textContent = /^\d/.test(item.marker) ? item.marker + ' ' : '• ';
+            if (hasChildren) { bullet.classList.add('mte-cell-fold-hit'); bullet.addEventListener('pointerdown', e=>{e.preventDefault();e.stopPropagation();}); bullet.addEventListener('click', e=>{e.preventDefault();e.stopPropagation(); if(this.plugin.cellFolds[key]) delete this.plugin.cellFolds[key]; else this.plugin.cellFolds[key]=true; this.plugin.saveState(); wrapper.querySelectorAll('.mte-cell-fold-hidden').forEach(el=>el.classList.remove('mte-cell-fold-hidden')); line.classList.toggle('mte-cell-fold-closed',!!this.plugin.cellFolds[key]); this.plugin.schedule();}); }
             if (/^\d/.test(item.marker)) bullet.classList.add('mte-outline-ordered');
             if (item.task) {
               line.classList.add('mte-outline-task');
@@ -200,6 +217,7 @@ class CellOutline {
               line.append(slot,body);
             } else line.append(bullet, ...bodyNodes);
           } else line.append(...bodyNodes);
+          if (isClosed && hasChildren) hiddenDepth = item.depth;
           wrapper.append(line); if (i < lines.length - 1) wrapper.append(document.createElement('br'));
         });
         this.previews.add({ wrapper, original });
