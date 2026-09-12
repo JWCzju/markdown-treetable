@@ -1,6 +1,6 @@
 const { Compartment } = require('@codemirror/state');
-const { foldService, codeFolding, foldCode, unfoldCode } = require('@codemirror/language');
-const { ViewPlugin, Decoration, WidgetType } = require('@codemirror/view');
+const { foldService, codeFolding, foldCode, unfoldCode, foldedRanges, foldEffect, unfoldEffect } = require('@codemirror/language');
+const { ViewPlugin, Decoration, WidgetType, EditorView } = require('@codemirror/view');
 function ancestorDepths(lines, index) {
   const result=[]; let depth=node(lines[index])?.depth || 0;
   for(let i=index-1;i>=0 && depth>0;i--) { const parent=node(lines[i]); if(parent && parent.depth<depth) {result.unshift(parent.depth);depth=parent.depth;} }
@@ -130,12 +130,21 @@ function indent(view, out) {
   if (changes.length) view.dispatch({ changes, userEvent: 'input.indent', scrollIntoView: true });
   return true;
 }
-function foldKey(view, wrapper, index) { return String(view.file?.path)+"|"+String([...view.containerEl.querySelectorAll(".table-cell-wrapper")].indexOf(wrapper))+"|"+index; }
+function sourceCell(view, wrapper) {
+  const td = wrapper.closest('td'), table = td?.closest('table.table-editor');
+  if (!table || !table.tBodies[0]) return null;
+  try {
+    const start = view.editor.cm.state.doc.lineAt(view.editor.cm.posAtDOM(table)).number - 1;
+    const row = [...table.tBodies[0].rows].indexOf(td.parentElement);
+    return row < 0 ? null : {row: start + 2 + row, col: td.cellIndex};
+  } catch (_) { return null; }
+}
 class CellOutline {
   constructor(plugin) {
     this.plugin = plugin;
     this.editors = new Map();
     this.previews = new Set();
+    this.restoring = new WeakSet();
     this.foldActions = new WeakMap();
     for (const type of ['pointerdown', 'mousedown', 'click']) plugin.registerDomEvent(document, type, event => {
       const marker = event.target.closest?.('.mte-cell-fold-hit');
@@ -175,7 +184,13 @@ class CellOutline {
 
     for (const [cm] of this.editors) if (cm.destroyed) this.editors.delete(cm);
     for (const entry of this.previews) if (!entry.wrapper.isConnected || !entry.wrapper.querySelector('.mte-outline-preview-line')) this.previews.delete(entry);
-    if (!this.enabled(view)) return;
+    if (!this.enabled(view) || !view.file) return;
+    const path = view.file.path, source = view.editor.getValue();
+    const nodes = this.plugin.foldMemory.sync(path, source);
+    const stamp = this.plugin.foldMemory.cache.get(path).hash + JSON.stringify(this.plugin.foldMemory.data.files[path]?.records || []);
+    for (const entry of this.previews) if (view.containerEl.contains(entry.wrapper) && entry.stamp !== stamp && !entry.wrapper.querySelector('.cm-editor')) {
+      entry.wrapper.replaceChildren(...entry.original); this.previews.delete(entry);
+    }
     for (const table of view.containerEl.querySelectorAll('table.table-editor')) {
       table.classList.add('mte-outline-table');
       for (const wrapper of table.querySelectorAll('.table-cell-wrapper')) {
@@ -197,6 +212,7 @@ class CellOutline {
           return text;
         });
         if (!lines.some(text => node(text))) continue;
+        const address = sourceCell(view, wrapper);
         const original = [...wrapper.childNodes];
         wrapper.replaceChildren();
         let hiddenDepth = null;
@@ -213,7 +229,8 @@ class CellOutline {
             return document.createTextNode(value);
           });
           if (item) {
-            const key=foldKey(view,wrapper,i); hasChildren=!item.task && !/^\d/.test(item.marker) && (node(lines[i+1] || '')?.depth > item.depth); isClosed=hasChildren && !!this.plugin.cellFolds[key];
+            const memoryNode = address && nodes.find(n => n.kind === 'cell' && n.row === address.row && n.col === address.col && n.index === i);
+            hasChildren = !!memoryNode; isClosed = this.plugin.foldMemory.get(path, memoryNode);
             if (hiddenDepth !== null && item.depth <= hiddenDepth) hiddenDepth = null;
             if (hiddenDepth !== null) line.classList.add('mte-cell-fold-hidden');
             if (hasChildren) { line.classList.add('mte-cell-fold-parent'); line.classList.toggle('mte-cell-fold-closed',isClosed); }
@@ -222,7 +239,8 @@ class CellOutline {
             if (hasChildren) {
               bullet.classList.add('mte-cell-fold-hit');
               this.foldActions.set(bullet, () => {
-                if(this.plugin.cellFolds[key]) delete this.plugin.cellFolds[key]; else this.plugin.cellFolds[key]=true;
+                if (view.editor.getValue() !== source) { this.plugin.schedule(); return; }
+                this.plugin.foldMemory.set(path, source, memoryNode, !this.plugin.foldMemory.get(path, memoryNode));
                 this.applyFolds(view, wrapper, lines);
                 this.plugin.saveState();
               });
@@ -243,7 +261,7 @@ class CellOutline {
           if (isClosed && hasChildren) hiddenDepth = item.depth;
           wrapper.append(line); if (i < lines.length - 1) wrapper.append(document.createElement('br'));
         });
-        this.previews.add({ wrapper, original });
+        this.previews.add({ wrapper, original, stamp });
       }
     }
     const cell = (view.currentMode || view.editMode)?.tableCell;
@@ -254,18 +272,43 @@ class CellOutline {
       const line = state.doc.lineAt(from); const end = endOfSubtree(state.doc, line.number);
       return end > line.number ? { from: line.to, to: state.doc.line(end).to } : null;
     });
-    cm.dispatch({ effects: require('@codemirror/state').StateEffect.appendConfig.of(compartment.of([service, codeFolding(), bullets])) });
+    const remember = EditorView.updateListener.of(update => {
+      if (this.restoring.has(cm) || update.docChanged || !update.transactions.some(t => t.effects.some(e => e.is(foldEffect) || e.is(unfoldEffect)))) return;
+      const wrapper = cm.dom.closest('.table-cell-wrapper');
+      const address = wrapper && sourceCell(view, wrapper);
+      if (!address) return;
+      const currentSource = view.editor.getValue(), currentPath = view.file.path;
+      const candidates = this.plugin.foldMemory.sync(currentPath, currentSource).filter(n => n.kind === 'cell' && n.row === address.row && n.col === address.col);
+      const folded = new Set();
+      for (let r = foldedRanges(cm.state).iter(); r.value; r.next()) folded.add(cm.state.doc.lineAt(r.from).number - 1);
+      for (const n of candidates) this.plugin.foldMemory.set(currentPath, currentSource, n, folded.has(n.index));
+      this.plugin.schedule();
+    });
+    cm.dispatch({ effects: require('@codemirror/state').StateEffect.appendConfig.of(compartment.of([service, codeFolding(), bullets, remember])) });
+    const wrapper = cm.dom.closest('.table-cell-wrapper');
+    const address = wrapper && sourceCell(view, wrapper);
+    if (address) {
+      const effects = [];
+      for (const n of nodes.filter(n => n.kind === 'cell' && n.row === address.row && n.col === address.col)) if (this.plugin.foldMemory.get(path, n) && n.index < cm.state.doc.lines) {
+        const line = cm.state.doc.line(n.index + 1), end = endOfSubtree(cm.state.doc, line.number);
+        if (end > line.number) effects.push(foldEffect.of({from: line.to, to: cm.state.doc.line(end).to}));
+      }
+      this.restoring.add(cm);
+      try { if (effects.length) cm.dispatch({effects}); } finally { this.restoring.delete(cm); }
+    }
     cm.dom.classList.add('mte-outline-editor');
     this.editors.set(cm, compartment);
   }
   applyFolds(view, wrapper, lines) {
+    const address = sourceCell(view, wrapper);
+    const candidates = this.plugin.foldMemory.sync(view.file.path, view.editor.getValue());
     let hiddenDepth = null;
     [...wrapper.querySelectorAll(':scope > .mte-outline-preview-line')].forEach((line, i) => {
       const item = node(lines[i]);
       if (item && hiddenDepth !== null && item.depth <= hiddenDepth) hiddenDepth = null;
       const hidden = hiddenDepth !== null;
-      const parent = item && !item.task && !/^\d/.test(item.marker) && node(lines[i+1] || '')?.depth > item.depth;
-      const closed = !!parent && !!this.plugin.cellFolds[foldKey(view, wrapper, i)];
+      const memoryNode = address && candidates.find(n => n.kind === 'cell' && n.row === address.row && n.col === address.col && n.index === i);
+      const closed = this.plugin.foldMemory.get(view.file.path, memoryNode);
       line.classList.toggle('mte-cell-fold-hidden', hidden);
       line.classList.toggle('mte-cell-fold-closed', closed);
       const marker = line.querySelector('.mte-cell-fold-hit');
