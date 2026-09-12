@@ -1,16 +1,10 @@
 const { WIDTH,clamp,tables,setWidths }=require('./widths.cjs');
-const {ViewPlugin,Decoration}=require('@codemirror/view');
-const {Compartment,StateEffect,EditorState}=require('@codemirror/state');
-const hideMetadata=ViewPlugin.fromClass(class {
-  constructor(view){this.build(view);}
-  update(u){if(u.docChanged)this.build(u.view);}
-  build(view){const ranges=[];const re=/<!--\s*width\s*=\s*\d+\s*-->/g;for(const m of view.state.doc.toString().matchAll(re))ranges.push(Decoration.replace({}).range(m.index,m.index+m[0].length));this.decorations=Decoration.set(ranges);}
-},{decorations:v=>v.decorations});
 class ColumnWidths {
   constructor(plugin){
-    this.plugin=plugin;this.records=new Map();this.editors=new Map();
+    this.plugin=plugin;this.records=new Map();
     this.style=document.createElement('style');this.style.textContent=`
-    .mte-width-scroll {overflow-x:auto!important;max-width:100%!important;padding-bottom:6px;}
+    .mte-width-scroll {overflow-x:auto!important;overflow-y:hidden!important;max-width:100%!important;padding-bottom:6px;}
+    .cm-table-widget.mte-width-scroll > .table-wrapper {overflow:visible!important;}
     table.mte-width-table {display:table!important;table-layout:fixed!important;min-width:0!important;max-width:none!important;}
     table.mte-width-table :is(th,td) {box-sizing:border-box!important;min-width:0!important;max-width:none!important;overflow-wrap:anywhere!important;word-break:normal!important;white-space:normal!important;}
     table.mte-width-table .table-cell-wrapper {min-width:0!important;max-width:100%!important;overflow-wrap:anywhere!important;}
@@ -31,7 +25,7 @@ class ColumnWidths {
     const widths=descriptor.cells.map((c,i)=>{const m=c.text.match(WIDTH);return m?clamp(+m[1]):clamp(record?.widths[i]||headers[i].getBoundingClientRect().width||180);});
     if(!record){
       record={table,originalStyle:table.getAttribute('style'),widths,descriptor,commit};this.records.set(table,record);
-      const parent=table.parentElement;record.parent=parent;record.hadScroll=parent.classList.contains('mte-width-scroll');parent.classList.add('mte-width-scroll');
+      const parent=table.closest('.cm-table-widget') || table.parentElement;record.parent=parent;record.hadScroll=parent.classList.contains('mte-width-scroll');parent.classList.add('mte-width-scroll');
       headers.forEach((th,index)=>{const grip=document.createElement('button');grip.className='mte-width-grip';grip.type='button';grip.setAttribute('aria-label',`调整第 ${index+1} 列宽度`);grip.title='拖动调整列宽；方向键每次 10px';
       grip.addEventListener('pointerdown',e=>this.start(e,record,index));
       for(const type of ['mousedown','click','dblclick'])grip.addEventListener(type,e=>{e.preventDefault();e.stopPropagation();});
@@ -72,15 +66,8 @@ class ColumnWidths {
         cm.dispatch({changes:{from:current.from,to:current.to,insert:setWidths(current.text,widths)},userEvent:'input'});
       });
     }catch(_){}
-    const cell=(view.currentMode||view.editMode)?.tableCell;const cellCM=cell?.editor?.cm;
-    if(cellCM && cell.containerEl?.closest('th') && !this.editors.has(cellCM)){
-      const compartment=new Compartment();cellCM.dispatch({effects:StateEffect.appendConfig.of(compartment.of([hideMetadata, EditorState.transactionFilter.of(tr=>{
-        const old=tr.startState.doc.toString().match(WIDTH);
-        if(!tr.docChanged||!old||WIDTH.test(tr.newDoc.toString()))return tr;
-        return [tr,{changes:{from:tr.newDoc.length,insert:' '+old[0]},sequential:true}];
-      })]))});this.editors.set(cellCM,compartment);
-    }
   }
+
   async reading(el,ctx){
     const file=this.plugin.app.vault.getAbstractFileByPath(ctx.sourcePath);if(!file)return;
     const source=await this.plugin.app.vault.cachedRead(file);if(this.dead)return;
@@ -90,7 +77,7 @@ class ColumnWidths {
       this.apply(table,d,async widths=>{await this.plugin.app.vault.process(file,text=>{const lines=text.split('\n');if(lines[d.line]!==d.raw)return text;lines[d.line]=setWidths(d.raw,widths);return lines.join('\n');});});
     }
   }
-  destroy(){this.dead=true;this.style.remove();for(const [cm,c]of this.editors)if(!cm.destroyed)cm.dispatch({effects:c.reconfigure([])});
+  destroy(){this.dead=true;this.style.remove();
     for(const [table,r]of this.records){table.classList.remove('mte-width-table');if(r.originalStyle===null)table.removeAttribute('style');else table.setAttribute('style',r.originalStyle);table.querySelectorAll('.mte-width-grip,colgroup[data-mte-widths]').forEach(e=>e.remove());if(!r.hadScroll)r.parent.classList.remove('mte-width-scroll');}
   }
 }

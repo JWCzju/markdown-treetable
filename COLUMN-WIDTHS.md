@@ -12,8 +12,7 @@ Only tables with width metadata switch to fixed layout. Their immediate parent
 provides horizontal scrolling. Other tables retain automatic layout until resized.
 Existing table-width-scroll CSS remains installed: explicit table layout/width
 properties override its content-sized behavior only for managed tables. No old span
-widths are migrated automatically. Metadata is hidden in the native header editor;
-replacing the full header title retains its width. Raw source mode keeps the comments.
+widths are migrated automatically. Metadata uses native Obsidian behavior: visible while editing the header, hidden in rendered text. No custom metadata decorations or protected edits.
 
 ## Validation
 
@@ -23,7 +22,7 @@ replacing the full header title retains its width. Raw source mode keeps the com
 - Actual measured widths are within 1 CSS pixel of requested values.
 - Scroll container clientWidth=984 and scrollWidth=1224 after drag.
 - Long unbroken text wraps without widening its column.
-- Header native editor shows only title; full-title replacement retains width=220.
+- Header native editor displays the original width comment (custom hiding removed by request).
 - Reading view keeps 220/400/600 and horizontal scrolling; actual screenshots inspected.
 - Sandbox smoke check passed. No production deployment.
 
@@ -39,3 +38,5 @@ hooks in plugin.cjs, for straightforward cherry-pick/merge.
 Not validated here: mobile, merged/nonstandard tables, concurrent remote editing,
 all embedded third-party renderers. Legacy width spans are not converted. A stale
 source snapshot during a drag cancels its write instead of overwriting new content.
+
+Follow-up: removed nested wrapper scrolling; Live Preview uses the existing outer cm-table-widget. Verified wide table has horizontal scrolling only and narrow table has no redundant scrollbar.
