@@ -1,4 +1,13 @@
 const test = require('node:test');
+test('tree task syntax keeps hierarchy separate from checkbox markers', () => {
+  const {hierarchy} = require('./model.cjs');
+  for (const checked of [' ', 'x']) {
+    const root = hierarchy(`- [${checked}] Root`);
+    assert.equal(root.depth, 0); assert.equal(root.explicit, ''); assert.equal(root.prefix, '');
+    const child = hierarchy(`> - [${checked}] Child`);
+    assert.equal(child.depth, 1); assert.equal(child.prefix, '> '); assert.equal(child.label, `- [${checked}] Child`);
+  }
+});
 const assert = require('node:assert/strict');
 const { parse, folded, visibility } = require('./model.cjs');
 test('groups contain root objects, stop at next group and retain nested folds', () => {

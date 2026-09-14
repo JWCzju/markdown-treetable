@@ -1,6 +1,16 @@
 const { Compartment } = require('@codemirror/state');
 const { foldService, codeFolding, foldCode, unfoldCode, foldedRanges, foldEffect, unfoldEffect } = require('@codemirror/language');
 const { ViewPlugin, Decoration, WidgetType, EditorView } = require('@codemirror/view');
+const { setIcon } = require('obsidian');
+function arrow(closed) {
+  const button = document.createElement('button');
+  button.type = 'button'; button.className = 'mte-outline-arrow'; button.tabIndex = -1;
+  button.setAttribute('aria-expanded', String(!closed));
+  button.title = closed ? '展开子项' : '折叠子项';
+  button.setAttribute('aria-label', button.title);
+  setIcon(button, closed ? 'chevron-right' : 'chevron-down');
+  return button;
+}
 function ancestorDepths(lines, index) {
   const result=[]; let depth=node(lines[index])?.depth || 0;
   for(let i=index-1;i>=0 && depth>0;i--) { const parent=node(lines[i]); if(parent && parent.depth<depth) {result.unshift(parent.depth);depth=parent.depth;} }
@@ -24,6 +34,17 @@ class Bullet extends WidgetType {
   }
   ignoreEvent() { return true; }
 }
+class FoldArrow extends Bullet {
+  toDOM(view) {
+    const button = arrow(this.closed);
+    button.addEventListener('mousedown', e => { e.preventDefault(); e.stopPropagation(); });
+    button.addEventListener('click', e => {
+      e.preventDefault(); e.stopPropagation();
+      view.dispatch({effects:(this.closed ? unfoldEffect : foldEffect).of({from:this.from,to:this.to})});
+    });
+    return button;
+  }
+}
 class TaskBox extends WidgetType {
   constructor(checked, pos) { super(); this.checked=checked; this.pos=pos; }
   eq(other) { return other.checked===this.checked && other.pos===this.pos; }
@@ -41,14 +62,21 @@ const bullets = ViewPlugin.fromClass(class {
   update(update) { if (update.docChanged || update.selectionSet || update.transactions.some(t=>t.effects.some(e=>e.is(foldEffect)||e.is(unfoldEffect)))) this.updateMarks(update.view); }
   updateMarks(view) {
     const marks = [];
+    for (let i=1; i<=view.state.doc.lines; i++) {
+      const line=view.state.doc.line(i), end=endOfSubtree(view.state.doc,i);
+      if (end<=i) continue;
+      let closed=false;
+      foldedRanges(view.state).between(line.to,line.to,from=>{if(from===line.to)closed=true;});
+      marks.push(Decoration.widget({widget:new FoldArrow(line.to,view.state.doc.line(end).to,closed),side:-1}).range(line.from));
+    }
     for (let i=1; i<=view.state.doc.lines; i++) { const line=view.state.doc.line(i); const n=node(line.text); if(n) { marks.push(Decoration.line({attributes:{class:'mte-outline-edit-line'+(n.task?' mte-outline-task':'')+(n.checked?' mte-outline-task-done':''),style:outlineStyle(n.depth,ancestorDepths(view.state.doc.toString().split('\n'),i-1))}}).range(line.from)); const prefixEnd=line.from+n.indent.length+n.marker.length+(n.task?5:1); const selected=view.state.selection.ranges.some(r=>!r.empty && r.from<prefixEnd && r.to>line.from); if(selected) continue; if(n.task) marks.push(Decoration.replace({widget:new TaskBox(n.checked,line.from+n.indent.length+n.marker.length+2)}).range(line.from,line.from+n.indent.length+n.marker.length+5)); else if(!/^\d/.test(n.marker)) marks.push(Decoration.replace({widget:new Bullet(line.to,view.state.doc.line(endOfSubtree(view.state.doc,i)).to,(()=>{let closed=false;foldedRanges(view.state).between(line.to,line.to,(from)=>{if(from===line.to)closed=true;});return closed;})())}).range(line.from,line.from+n.indent.length+2)); } }
     this.decorations=Decoration.set(marks, true);
   }
 }, {decorations: value=>value.decorations});
 
 function node(text) {
-  const m = /^(\s*)([-+*]|\d+[.)]) (.*)$/.exec(text);
-  return m && { indent: m[1], depth: m[1].replace(/\t/g, '    ').length, marker: m[2], body: m[3], task: /^\[[ xX]\] /.test(m[3]), checked: /^\[[xX]\]/.test(m[3]) };
+  const m = /^(\s*(?:>+[+-]?\s+)?)([-+*]|\d+[.)]) (.*)$/.exec(text);
+  return m && { indent: m[1], depth: /^\s*/.exec(m[1])[0].replace(/\t/g, '    ').length, marker: m[2], body: m[3], task: /^\[[ xX]\] /.test(m[3]), checked: /^\[[xX]\]/.test(m[3]) };
 }
 function endOfSubtree(doc, number) {
   const parent = node(doc.line(number).text);
@@ -94,7 +122,7 @@ function moveOrdered(view, down) {
 function toggleTask(view) {
   const line = view.state.doc.lineAt(view.state.selection.main.head); const n = node(line.text);
   if (!n) {
-    const indent = /^\s*/.exec(line.text)[0].length;
+    const indent = /^\s*(?:>+[+-]?\s+)?/.exec(line.text)[0].length;
     view.dispatch({changes:{from:line.from+indent,insert:'- [ ] '},userEvent:'input'});
     return true;
   }
@@ -159,7 +187,7 @@ class CellOutline {
     this.searchAdapters = new Map();
     this.searchOverrides = new Map();
     for (const type of ['pointerdown', 'mousedown', 'click']) plugin.registerDomEvent(document, type, event => {
-      const marker = event.target.closest?.('.mte-cell-fold-hit');
+      const marker = event.target.closest?.('.mte-cell-fold-hit, .mte-arrow-hit');
       const action = marker && this.foldActions.get(marker);
       if (!action || event.button !== 0) return;
       event.preventDefault(); event.stopImmediatePropagation();
@@ -295,6 +323,10 @@ class CellOutline {
                 this.applyFolds(view, wrapper, lines);
                 this.plugin.saveState();
               });
+              const toggle = arrow(isClosed);
+              toggle.classList.add('mte-arrow-hit');
+              this.foldActions.set(toggle, this.foldActions.get(bullet));
+              line.append(toggle);
             }
             if (/^\d/.test(item.marker)) bullet.classList.add('mte-outline-ordered');
             if (item.task) {
@@ -369,6 +401,13 @@ class CellOutline {
       line.classList.toggle('mte-cell-fold-closed', closed);
       const marker = line.querySelector('.mte-cell-fold-hit');
       if (marker) marker.setAttribute('aria-expanded', String(!closed));
+      const toggle = line.querySelector('.mte-outline-arrow');
+      if (toggle) {
+        setIcon(toggle, closed ? 'chevron-right' : 'chevron-down');
+        toggle.title = closed ? '展开子项' : '折叠子项';
+        toggle.setAttribute('aria-label', toggle.title);
+        toggle.setAttribute('aria-expanded', String(!closed));
+      }
       if (!hidden && closed) hiddenDepth = item.depth;
     });
   }
@@ -384,7 +423,7 @@ class CellOutline {
       const col=td.cellIndex; const from=pipes[col]+1; const to=pipes[col+1];
       if(!Number.isFinite(from)||!Number.isFinite(to))return;
       const raw=source.text.slice(from,to); const segments=raw.split(/<br\s*\/?\s*>/i);
-      const segment=segments[itemIndex]; const match=/^\s*[-+*] \[([ xX])\] /.exec(segment||'');
+      const segment=segments[itemIndex]; const match=/^\s*(?:>+[+-]?\s+)?[-+*] \[([ xX])\] /.exec(segment||'');
       if(!match || /[xX]/.test(match[1])!==checked)return;
       let offset=0; const breaks=[...raw.matchAll(/<br\s*\/?\s*>/gi)];
       if(itemIndex)offset=breaks[itemIndex-1].index+breaks[itemIndex-1][0].length;

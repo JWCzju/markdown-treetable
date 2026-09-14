@@ -1,6 +1,6 @@
 const MarkdownIt = require('markdown-it');
 const md = new MarkdownIt();
-const prefixPattern = /^(?:(>+)([+-])?\s+|([+-])\s+)/;
+const prefixPattern = /^(?:(>+)([+-])?\s+|([+-])\s+(?!\[[ xX]\]\s))/;
 
 function hierarchy(text) {
   const group = text.match(/^(#{1,3})([+-])?\s+/);

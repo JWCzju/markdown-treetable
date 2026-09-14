@@ -80,6 +80,18 @@ body .markdown-preview-view table.mte-grouped > tbody > tr.mte-group > td:not(:f
   text-indent: -1.2em !important;
 }
 .mte-outline-preview-line + br { display: none; }
+.mte-outline-table td:not(.mte-cell) { padding-left: 12px !important; }
+.mte-outline-preview-line, .mte-outline-edit-line { position:relative; }
+button.mte-outline-arrow {
+  position:absolute; left:calc(var(--mte-outline-indent, 0em) - 12px); top:2px;
+  display:inline-flex; align-items:center; justify-content:center;
+  width:12px; height:20px; padding:0; margin:0;
+  border:0; box-shadow:none; background:transparent; color:var(--text-muted);
+  cursor:pointer; text-indent:0; z-index:2;
+}
+button.mte-outline-arrow svg { width:12px; height:12px; }
+button.mte-outline-arrow:hover { color:var(--text-normal); background:var(--background-modifier-hover); }
+.mte-outline-editor, .mte-outline-editor .cm-scroller, .mte-outline-editor .cm-content { overflow:visible !important; }
 .mte-outline-marker:not(.mte-outline-ordered) {
   display: inline-block;
   width: 1.2rem;
