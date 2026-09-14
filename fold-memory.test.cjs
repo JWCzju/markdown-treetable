@@ -26,11 +26,38 @@ test('inserting list sibling does not transfer its successor fold to the new nod
 });
 test('same-line-count external edits preserve only structurally matched anchors',()=>{
  const m=setup();const changed=source.replace('父甲','换甲');m.sync('a.md',changed);
- assert.ok(m.data.files['a.md']);
+ assert.ok(m.sync('a.md',changed).every(n=>m.get('a.md',n)));
  const x=setup(), from=source.indexOf('- 父甲'), to=source.indexOf('- 父乙');
  const after=source.slice(0,from)+source.slice(to);
  x.update('a.md',source,after,[{from,to,insert:''}]);
  assert.equal(x.data.files['a.md'].records.filter(n=>n.kind==='cell').length,1);
+});
+test('offline plugin rename and AI patches keep IDs through reload',()=>{
+ const m=setup(), ids=m.sync('a.md',source).map(n=>n.id);
+ const restored=new FoldMemory(JSON.parse(JSON.stringify(m.data)));
+ const after='Introduction\n\n'+source.replaceAll('父甲','重命名甲').replaceAll('父乙','重命名乙');
+ const nodes=restored.sync('a.md',after);
+ assert.deepEqual(nodes.map(n=>n.id),ids);
+ assert.ok(nodes.every(n=>restored.get('a.md',n)));
+});
+test('external set transaction preserves surviving nodes and clears only rewritten branch',()=>{
+ const m=setup(), after=source.replace('父甲<br>  - 子甲','完全替换<br>  - 全新子项');
+ m.update('a.md',source,after,[{from:0,to:source.length,insert:after}],true);
+ assert.deepEqual(m.sync('a.md',after).filter(n=>n.kind==='cell').map(n=>m.get('a.md',n)),[false,true]);
+});
+test('duplicate copies never share a persistent ID',()=>{
+ const m=setup(), after=source.replace('- 父甲<br>  - 子甲','- 父甲<br>  - 子甲<br>- 父甲<br>  - 子甲');
+ const nodes=m.sync('a.md',after).filter(n=>n.kind==='cell');
+ assert.equal(new Set(nodes.map(n=>n.id)).size,nodes.length);
+ assert.deepEqual(nodes.map(n=>m.get('a.md',n)),[false,false,true]);
+});
+test('legacy offset records migrate without losing folds on first unchanged load',()=>{
+ const m=setup(), saved=JSON.parse(JSON.stringify(m.data));
+ delete saved.files['a.md'].identities;
+ saved.files['a.md'].records.forEach(r=>delete r.id);
+ const restored=new FoldMemory(saved);
+ assert.ok(restored.sync('a.md',source).every(n=>restored.get('a.md',n)));
+ assert.ok(restored.data.files['a.md'].identities.every(n=>n.id));
 });
 test('file and folder renames migrate closed records, delete cleans up',()=>{
  const m=setup();m.rename('a.md','folder/a.md');m.rename('folder','new');

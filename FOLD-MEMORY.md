@@ -2,7 +2,11 @@
 
 Tree rows and native table-cell lists use versioned `foldMemory` in plugin data.json. Markdown is never changed by folding. Records contain source offsets, node kind/depth, explicit-marker baseline, closed state, and a SHA-256 document fingerprint. No document UUID is required.
 
-Normal CodeMirror edits map positions through changes. Native whole-cell replacements are narrowed to actual edits; padding-only table formatting is mapped by unchanged structure. Deleted anchors or changed hierarchy invalidate the affected record. Reopening externally changed source invalidates the document's records, including same-line-count changes. File/folder rename events migrate path keys; delete clears records. Copying Markdown to another vault does not copy personal view state.
+Foldable nodes have persistent internal UUIDs and hashed structural descriptors (column headings, label, children and neighboring cells). Local edits, external writes and offline changes use the same bidirectionally unique matching passes. Content is not stored in these descriptors. Unmatched or ambiguous nodes receive fresh IDs; only their state resets. File/folder rename events migrate path keys; delete clears records. Copying Markdown to another vault does not copy personal view state.
+
+Search highlighting temporarily reveals matching cell branches without changing saved folds. Clearing the host's search highlight restores the saved state. Explicit user folding still updates persistent memory.
+
+The data version remains 1 with additive identities so the checkpoint build can still read current positional records. Old positional records acquire identities on the first unchanged load; if the original fingerprint is already unavailable, their previous identity cannot be reconstructed reliably. Duplicate identical branches are deliberately treated as ambiguous. Concurrent changes to every identifying part of a branch may reset that branch, but never clear unrelated records.
 
 Legacy states/cellFolds are retained in legacyFoldState for recovery but not guessed onto new positions. They may need to be set again once. To roll back, restore legacyFoldState.states/cellFolds as top-level fields with the previous plugin artifact. Explicit Markdown fold markers remain supported.
 

@@ -147,6 +147,10 @@ class FoldMemory {
     return nodes;
   }
   update(path, before, after, changes, external = false) {
+    if (this.data.files[path] && !this.data.files[path].identities) {
+      this.cache.delete(path);
+      this.sync(path, before);
+    }
     if (this.data.files[path]?.identities) {
       const nodes = describe(after, path), hash = digest(after);
       this.reconcile(path, nodes, hash, this.data.files[path].hash === digest(before) && !external ? minimalChanges(before, changes) : null);
