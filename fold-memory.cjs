@@ -1,4 +1,4 @@
-const { createHash } = require('node:crypto');
+const { createHash, randomUUID } = require('node:crypto');
 const { parse } = require('./model.cjs');
 const { tables, cells, WIDTH } = require('./widths.cjs');
 const digest = source => createHash('sha256').update(source).digest('hex');
@@ -35,6 +35,33 @@ function describe(source, path) {
           end, shape: `depth:${depth}`, explicit: '', row, col, index});
       });
     });
+  }
+  const normalize = text => text.replace(WIDTH, '').replace(/\[[ xX]\]/g, '[ ]').trim();
+  const descriptors = tables(source);
+  for (const n of result) {
+    const row = n.row ?? offsets.findLastIndex(p => p <= n.pos);
+    const table = descriptors.find(t => row >= t.line + 2 && row < t.end);
+    if (!table) continue;
+    const col = n.col ?? cells(lines[row]).findIndex(c => n.pos < offsets[row] + c.to);
+    const header = table.cells.map(c => normalize(c.text));
+    n.scope = digest(JSON.stringify([...header].sort()));
+    n.column = digest(header[col] || '');
+    let label, children;
+    if (n.kind === 'cell') {
+      const segments = cells(lines[row])[col].text.split(/<br\s*\/?\s*>/i);
+      label = normalize(listNode(segments[n.index])?.[3] || '');
+      children = normalize(source.slice(n.pos, n.end).replace(/^[^]*?<br\s*\/?\s*>/i, ''));
+    } else {
+      label = normalize(cells(lines[row])[col]?.text || '').replace(/^(?:#+|>*)[+-]?\s*/, '');
+      const following = result.filter(x => x.kind === 'tree' && x.pos > n.pos);
+      const boundary = following.find(x => x.shape === n.shape)?.pos ?? (offsets[table.end] ?? source.length);
+      children = lines.slice(row + 1, offsets.findIndex(p => p >= boundary) < 0 ? table.end : offsets.findIndex(p => p >= boundary))
+        .map(line => cells(line).map(c => normalize(c.text))).flat().join('\n');
+    }
+    n.label = digest(label);
+    n.children = digest(children);
+    n.identity = digest(JSON.stringify([n.kind, n.scope, n.column, label, children]));
+    n.context = digest(JSON.stringify(cells(lines[row]).filter((_, i) => i !== col).map(c => normalize(c.text)).sort()));
   }
   return result;
 }
@@ -107,12 +134,25 @@ class FoldMemory {
     const cached = this.cache.get(path);
     if (cached?.source === source) return cached.nodes;
     const hash = digest(source), previous = this.data.files[path];
-    if (previous && previous.hash !== hash) { delete this.data.files[path]; this.changed(); }
     const nodes = describe(source, path);
+    if (previous?.identities) this.reconcile(path, nodes, hash);
+    else if (previous) {
+      // Legacy offsets are trustworthy only against their original fingerprint.
+      const records = previous.hash === hash ? previous.records : [];
+      nodes.forEach(n => { n.id = randomUUID(); });
+      this.data.files[path] = {hash, records: records.map(r => ({...r, id:nodes.find(n => key(n) === key(r))?.id})), identities:nodes};
+      this.changed();
+    } else nodes.forEach(n => { n.id = randomUUID(); });
     this.cache.set(path, {source, nodes, hash});
     return nodes;
   }
   update(path, before, after, changes, external = false) {
+    if (this.data.files[path]?.identities) {
+      const nodes = describe(after, path), hash = digest(after);
+      this.reconcile(path, nodes, hash, this.data.files[path].hash === digest(before) && !external ? minimalChanges(before, changes) : null);
+      this.cache.set(path, {source:after, nodes, hash});
+      return;
+    }
     const file = this.data.files[path];
     if (file && file.hash === digest(before) && !external) {
       const edits = minimalChanges(before, changes), nodes = describe(after, path);
@@ -133,17 +173,46 @@ class FoldMemory {
   }
   get(path, node) {
     if (!node) return false;
-    const record = this.data.files[path]?.records.find(r => key(r) === key(node) && r.shape === node.shape && r.explicit === node.explicit);
+    const record = this.data.files[path]?.records.find(r => (node.id && r.id ? r.id === node.id : key(r) === key(node)) && r.explicit === node.explicit);
     return record ? record.closed : node.explicit === '-';
   }
   set(path, source, node, closed) {
     const nodes = this.sync(path, source);
     const current = node && nodes.find(n => key(n) === key(node) && n.shape === node.shape && n.explicit === node.explicit);
     if (!current) return false;
-    const file = this.data.files[path] ||= {hash: digest(source), records: []};
+    const file = this.data.files[path] ||= {hash: digest(source), records: [], identities:nodes};
     file.records = file.records.filter(r => key(r) !== key(current));
-    const {kind, pos, shape, explicit} = current;
-    file.records.push({kind, pos, shape, explicit, closed: !!closed}); this.changed(); return true;
+    const {kind, pos, shape, explicit, id} = current;
+    file.records.push({kind, pos, shape, explicit, id, closed: !!closed}); this.changed(); return true;
+  }
+  reconcile(path, nodes, hash, edits = null) {
+    const file = this.data.files[path], old = file.identities;
+    const available = new Set(old), pending = new Set(nodes), matched = new Map();
+    const accept = (a, b) => { b.id = a.id; available.delete(a); pending.delete(b); matched.set(a.id, b); };
+    // Each pass requires a unique match in BOTH directions; copies and duplicates
+    // must not silently inherit an unrelated node's fold state.
+    const pass = predicate => {
+      const pairs = [];
+      for (const b of pending) {
+        const candidates = [...available].filter(a => a.kind === b.kind && predicate(a, b));
+        if (candidates.length === 1 && [...pending].filter(c => c.kind === candidates[0].kind && predicate(candidates[0], c)).length === 1) pairs.push([candidates[0], b]);
+      }
+      pairs.forEach(([a,b]) => accept(a,b));
+    };
+    if (file.hash === hash) pass((a,b) => a.pos === b.pos);
+    pass((a,b) => a.identity === b.identity);
+    pass((a,b) => a.scope === b.scope && a.column === b.column && a.label === b.label && a.context === b.context);
+    pass((a,b) => a.scope === b.scope && a.column === b.column && a.children === b.children && a.context === b.context && a.shape === b.shape);
+    pass((a,b) => a.scope === b.scope && a.column === b.column && a.label === b.label);
+    pass((a,b) => a.scope === b.scope && a.column === b.column && a.children === b.children && a.shape === b.shape);
+    if (edits) pass((a,b) => mappedPosition(a.pos, edits) === b.pos && a.shape === b.shape && a.label === b.label);
+    for (const n of pending) n.id = randomUUID();
+    const records = file.records.flatMap(r => {
+      const n = matched.get(r.id);
+      return n && n.explicit === r.explicit ? [{kind:n.kind, pos:n.pos, shape:n.shape, explicit:n.explicit, id:n.id, closed:r.closed}] : [];
+    });
+    this.data.files[path] = {hash, records, identities:nodes};
+    this.changed();
   }
   rename(oldPath, newPath) {
     for (const path of Object.keys(this.data.files)) if (path === oldPath || path.startsWith(oldPath + '/')) {

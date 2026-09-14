@@ -24,9 +24,9 @@ test('inserting list sibling does not transfer its successor fold to the new nod
  const nodes=m.sync('a.md',after).filter(n=>n.kind==='cell');
  assert.deepEqual(nodes.map(n=>m.get('a.md',n)),[true,false,true]);
 });
-test('same-line-count external edits invalidate and deleted anchors do not transfer',()=>{
+test('same-line-count external edits preserve only structurally matched anchors',()=>{
  const m=setup();const changed=source.replace('父甲','换甲');m.sync('a.md',changed);
- assert.equal(m.data.files['a.md'],undefined);
+ assert.ok(m.data.files['a.md']);
  const x=setup(), from=source.indexOf('- 父甲'), to=source.indexOf('- 父乙');
  const after=source.slice(0,from)+source.slice(to);
  x.update('a.md',source,after,[{from,to,insert:''}]);
