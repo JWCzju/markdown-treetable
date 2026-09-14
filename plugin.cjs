@@ -127,10 +127,15 @@ class MyTableExtended extends Plugin {
   }
 
   async decorateReading(el, ctx) {
+    if (!el.querySelector('table')) return;
     const file = this.app.vault.getAbstractFileByPath(ctx.sourcePath);
     if (!file) return;
-    const candidates = this.memoryTables(await this.app.vault.cachedRead(file), ctx.sourcePath);
+    const diskSource = await this.app.vault.cachedRead(file);
     if (this.unloaded) return;
+    // Inline rendering can finish before the editor has saved its new source.
+    const editor = this.app.workspace.getLeavesOfType('markdown').map(l => l.view)
+      .find(v => v.file?.path === ctx.sourcePath && v.getMode?.() === 'source' && v.editor?.cm?.state.doc.length)?.editor;
+    const candidates = this.memoryTables(editor ? editor.getValue() : diskSource, ctx.sourcePath);
     for (const element of el.querySelectorAll('table')) {
       const section = ctx.getSectionInfo(element);
       const first = element.querySelector('tbody > tr > td')?.textContent?.trim() || '';

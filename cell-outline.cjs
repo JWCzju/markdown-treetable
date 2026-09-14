@@ -10,9 +10,19 @@ function outlineStyle(depth) {
   return `--mte-outline-indent:${depth*.6}em;`;
 }
 class Bullet extends WidgetType {
-  eq() { return true; }
-  toDOM() { const span=document.createElement('span'); span.className='mte-outline-bullet-widget'; span.textContent='•'; return span; }
-  ignoreEvent() { return false; }
+  constructor(from, to, closed) { super(); this.from=from; this.to=to; this.closed=closed; }
+  eq(other) { return this.from===other.from && this.to===other.to && this.closed===other.closed; }
+  toDOM(view) {
+    const span=document.createElement('span');
+    span.className='mte-outline-bullet-widget'+(this.closed?' mte-point-closed':''); span.textContent='•';
+    if(this.to>this.from) {
+      span.classList.add('mte-point-toggle'); span.setAttribute('aria-expanded',String(!this.closed));
+      span.addEventListener('mousedown',e=>{e.preventDefault();e.stopPropagation();});
+      span.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();view.dispatch({effects:(this.closed?unfoldEffect:foldEffect).of({from:this.from,to:this.to})});});
+    }
+    return span;
+  }
+  ignoreEvent() { return true; }
 }
 class TaskBox extends WidgetType {
   constructor(checked, pos) { super(); this.checked=checked; this.pos=pos; }
@@ -28,10 +38,10 @@ class TaskBox extends WidgetType {
 }
 const bullets = ViewPlugin.fromClass(class {
   constructor(view) { this.updateMarks(view); }
-  update(update) { if (update.docChanged || update.selectionSet) this.updateMarks(update.view); }
+  update(update) { if (update.docChanged || update.selectionSet || update.transactions.some(t=>t.effects.some(e=>e.is(foldEffect)||e.is(unfoldEffect)))) this.updateMarks(update.view); }
   updateMarks(view) {
     const marks = [];
-    for (let i=1; i<=view.state.doc.lines; i++) { const line=view.state.doc.line(i); const n=node(line.text); if(n) { marks.push(Decoration.line({attributes:{class:'mte-outline-edit-line'+(n.task?' mte-outline-task':'')+(n.checked?' mte-outline-task-done':''),style:outlineStyle(n.depth,ancestorDepths(view.state.doc.toString().split('\n'),i-1))}}).range(line.from)); const prefixEnd=line.from+n.indent.length+n.marker.length+(n.task?5:1); const selected=view.state.selection.ranges.some(r=>!r.empty && r.from<prefixEnd && r.to>line.from); if(selected) continue; if(n.task) marks.push(Decoration.replace({widget:new TaskBox(n.checked,line.from+n.indent.length+n.marker.length+2)}).range(line.from,line.from+n.indent.length+n.marker.length+5)); else if(!/^\d/.test(n.marker)) marks.push(Decoration.replace({widget:new Bullet()}).range(line.from,line.from+n.indent.length+2)); } }
+    for (let i=1; i<=view.state.doc.lines; i++) { const line=view.state.doc.line(i); const n=node(line.text); if(n) { marks.push(Decoration.line({attributes:{class:'mte-outline-edit-line'+(n.task?' mte-outline-task':'')+(n.checked?' mte-outline-task-done':''),style:outlineStyle(n.depth,ancestorDepths(view.state.doc.toString().split('\n'),i-1))}}).range(line.from)); const prefixEnd=line.from+n.indent.length+n.marker.length+(n.task?5:1); const selected=view.state.selection.ranges.some(r=>!r.empty && r.from<prefixEnd && r.to>line.from); if(selected) continue; if(n.task) marks.push(Decoration.replace({widget:new TaskBox(n.checked,line.from+n.indent.length+n.marker.length+2)}).range(line.from,line.from+n.indent.length+n.marker.length+5)); else if(!/^\d/.test(n.marker)) marks.push(Decoration.replace({widget:new Bullet(line.to,view.state.doc.line(endOfSubtree(view.state.doc,i)).to,(()=>{let closed=false;foldedRanges(view.state).between(line.to,line.to,(from)=>{if(from===line.to)closed=true;});return closed;})())}).range(line.from,line.from+n.indent.length+2)); } }
     this.decorations=Decoration.set(marks, true);
   }
 }, {decorations: value=>value.decorations});
@@ -146,6 +156,7 @@ class CellOutline {
     this.previews = new Set();
     this.restoring = new WeakSet();
     this.foldActions = new WeakMap();
+    this.searchAdapters = new Map();
     for (const type of ['pointerdown', 'mousedown', 'click']) plugin.registerDomEvent(document, type, event => {
       const marker = event.target.closest?.('.mte-cell-fold-hit');
       const action = marker && this.foldActions.get(marker);
@@ -173,7 +184,37 @@ class CellOutline {
 
   }
   enabled(view) { return this.plugin.cellMarkdownGlobal || /<!--\s*cell-markdown\s*-->/.test(view.editor?.getValue() || ''); }
+  revealMatches(view, matches) {
+    if (!view.file || !this.enabled(view) || !Array.isArray(matches) || !matches.length) return;
+    const source = view.editor.getValue(), path = view.file.path;
+    const ranges = matches.map(m => ({from:view.editor.posToOffset(m.from), to:view.editor.posToOffset(m.to)}));
+    const nodes = this.plugin.foldMemory.sync(path, source);
+    const opened = nodes.filter(n => n.kind === 'cell' && this.plugin.foldMemory.get(path, n) && ranges.some(r => r.from < n.end && r.to > n.pos));
+    for (const n of opened) this.plugin.foldMemory.set(path, source, n, false);
+    const cm = (view.currentMode || view.editMode)?.tableCell?.editor?.cm;
+    const address = cm && sourceCell(view, cm.dom.closest('.table-cell-wrapper'));
+    if (address) {
+      const effects = opened.filter(n => n.row === address.row && n.col === address.col && n.index < cm.state.doc.lines).map(n => {
+        const line = cm.state.doc.line(n.index + 1);
+        return unfoldEffect.of({from:line.to, to:cm.state.doc.line(endOfSubtree(cm.state.doc, line.number)).to});
+      });
+      this.restoring.add(cm);
+      try { if (effects.length) cm.dispatch({effects}); } finally { this.restoring.delete(cm); }
+    }
+    if (opened.length) this.plugin.schedule();
+  }
   scan(view) {
+    const mode = view.editMode;
+    if (mode?.highlightSearchMatches && !this.searchAdapters.has(mode)) {
+      const original = mode.highlightSearchMatches;
+      const outline = this;
+      const wrapped = function(matches, ...args) {
+        outline.revealMatches(view, matches);
+        return original.call(this, matches, ...args);
+      };
+      mode.highlightSearchMatches = wrapped;
+      this.searchAdapters.set(mode, {original, wrapped});
+    }
     for (const table of view.containerEl.querySelectorAll('table:not(.table-editor)')) {
       for (const li of table.querySelectorAll('td li')) {
         const child=li.querySelector(':scope > ul, :scope > ol'); if(!child || li.dataset.mteFoldBound) continue;
@@ -358,6 +399,8 @@ class CellOutline {
     event.preventDefault(); event.stopImmediatePropagation(); action();
   }
   destroy() {
+    for (const [mode, {original, wrapped}] of this.searchAdapters) if (mode.highlightSearchMatches === wrapped) mode.highlightSearchMatches = original;
+    this.searchAdapters.clear();
     for (const [cm, compartment] of this.editors) if (!cm.destroyed) { cm.dispatch({ effects: compartment.reconfigure([]) }); cm.dom.classList.remove('mte-outline-editor'); }
     for (const { wrapper, original } of this.previews) if (wrapper.isConnected && wrapper.querySelector('.mte-outline-preview-line') && !wrapper.querySelector('.cm-editor')) wrapper.replaceChildren(...original);
     for (const e of document.querySelectorAll('.mte-outline-table')) e.classList.remove('mte-outline-table');

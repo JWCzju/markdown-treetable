@@ -47,3 +47,23 @@ test('native alignment of whole table preserves anchors',()=>{
  m.update('a.md',source,after,[{from:0,to:source.length,insert:after}]);
  for(const n of m.sync('a.md',after))assert.equal(m.get('a.md',n),true);
 });
+test('column width metadata and column reorder preserve independent cell folds',()=>{
+ const {setWidths,cells}=require('./widths.cjs');
+ const m=setup();
+ const lines=source.split('\n');lines[0]=setWidths(lines[0],[250,410]);
+ const resized=lines.join('\n');
+ m.update('a.md',source,resized,[{from:0,to:source.length,insert:resized}]);
+ assert.ok(m.sync('a.md',resized).every(n=>m.get('a.md',n)));
+ const moved=resized.split('\n').map(l=>l.includes('|')?'|'+cells(l).reverse().map(c=>c.text).join('|')+'|':l).join('\n');
+ m.update('a.md',resized,moved,[{from:0,to:resized.length,insert:moved}]);
+ const nodes=m.sync('a.md',moved).filter(n=>n.kind==='cell');
+ assert.equal(nodes.length,2);assert.ok(nodes.every(n=>n.col===0&&m.get('a.md',n)));
+});
+test('checkbox edits in several cells in a full-table replacement preserve folds',()=>{
+ const before='| A | B |\n| --- | --- |\n| - [ ] Parent<br>  - child | - [ ] Other<br>  - child |\n';
+ const m=new FoldMemory(), nodes=m.sync('x',before);
+ nodes.forEach((n,i)=>m.set('x',before,n,i===0));
+ const after=before.replaceAll('[ ]','[x]');
+ m.update('x',before,after,[{from:0,to:before.length,insert:after}]);
+ assert.deepEqual(m.sync('x',after).map(n=>m.get('x',n)),[true,false]);
+});
