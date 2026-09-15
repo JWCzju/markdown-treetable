@@ -4,7 +4,7 @@ body .markdown-source-view.mod-cm6 table.table-editor.mte-table > tbody > tr > t
 body .markdown-preview-view table.mte-table > tbody > tr > td.mte-cell,
 body table.table-editor.mte-table > tbody > tr > td.mte-cell {
   position: relative;
-  padding-left: calc(28px + var(--mte-inset, 0px) + var(--mte-depth, 0) * 22px) !important;
+  padding-left: calc(28px + var(--mte-inset, 0px) + var(--mte-indent, 0px)) !important;
 }
 
 .mte-table .mte-prefix { display: none; }
@@ -17,7 +17,7 @@ body table.mte-table > tbody > tr.mte-group > td {
 
 body .mte-table button.mte-toggle {
   position: absolute;
-  left: calc(5px + var(--mte-inset, 0px) + var(--mte-depth, 0) * 22px);
+  left: calc(5px + var(--mte-inset, 0px) + var(--mte-indent, 0px));
   top: 6px;
   display: flex;
   align-items: center;

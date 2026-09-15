@@ -8,6 +8,13 @@ test('tree task syntax keeps hierarchy separate from checkbox markers', () => {
     assert.equal(child.depth, 1); assert.equal(child.prefix, '> '); assert.equal(child.label, `- [${checked}] Child`);
   }
 });
+test('standalone block IDs after a tree table do not become table rows', () => {
+  const source = '<!-- tree-table -->\n| Q | A |\n| --- | --- |\n| # Group | |\n| Root | |\n| > Child | text |\n^tree-block';
+  const table = parse(source)[0];
+  assert.equal(table.rows.length, 3);
+  assert.equal(table.valid, true);
+  assert.equal(table.end, 6);
+});
 const assert = require('node:assert/strict');
 const { parse, folded, visibility } = require('./model.cjs');
 test('groups contain root objects, stop at next group and retain nested folds', () => {

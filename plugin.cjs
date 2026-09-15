@@ -5,6 +5,17 @@ const { FoldMemory } = require('./fold-memory.cjs');
 const { EditorView } = require('@codemirror/view');
 const { CellOutline } = require('./cell-outline.cjs');
 
+function renderedTableCandidate(candidates, element, info) {
+  const rows = element.querySelectorAll('tbody > tr');
+  const first = rows[0]?.cells[0]?.textContent?.trim() || '';
+  const label = first.replace(/^(?:#{1,3}|>+)\s+/, '');
+  const direct = candidates.find(table => table.start === info?.lineStart);
+  if (direct) return direct;
+  const matching = candidates.filter(table => table.valid && table.rows.length === rows.length &&
+    (table.rows[0]?.label === first || table.rows[0]?.label === label));
+  return matching.length === 1 ? matching[0] : undefined;
+}
+
 class MyTableExtended extends Plugin {
   async onload() {
     const saved = await this.loadData();
@@ -34,6 +45,7 @@ class MyTableExtended extends Plugin {
     this.columnWidths = new ColumnWidths(this);
     this.textSelectionGuards = new Map();
     this.reading = new Map();
+    this.embeds = new WeakSet();
     this.composing = false;
     this.observer = new MutationObserver(() => this.schedule());
     this.imageLoads = new WeakSet();
@@ -95,6 +107,7 @@ class MyTableExtended extends Plugin {
         if (!element.isConnected) this.reading.delete(element);
         else this.decorate(element, table);
       }
+      this.scanEmbeddedTables();
       for (const leaf of this.app.workspace.getLeavesOfType('markdown')) {
         const view = leaf.view;
         const cm = view.editor?.cm;
@@ -126,22 +139,44 @@ class MyTableExtended extends Plugin {
     } finally { this.observe(); }
   }
 
+  scanEmbeddedTables() {
+    for (const embed of document.querySelectorAll('.internal-embed.markdown-embed.is-loaded')) {
+      if (this.embeds.has(embed) || !embed.querySelector('table')) continue;
+      this.embeds.add(embed);
+      this.decorateEmbedded(embed).finally(() => this.schedule());
+    }
+  }
+
+  async decorateEmbedded(embed) {
+    const target = embed.getAttribute('src')?.split('#')[0];
+    const file = target && this.app.metadataCache.getFirstLinkpathDest(target, '');
+    if (!file) return;
+    const source = await this.app.vault.cachedRead(file);
+    if (this.unloaded || !embed.isConnected) return;
+    const candidates = this.memoryTables(source, file.path);
+    for (const element of embed.querySelectorAll('table')) {
+      const table = renderedTableCandidate(candidates, element);
+      if (table) this.reading.set(element, table);
+    }
+  }
+
   async decorateReading(el, ctx) {
     if (!el.querySelector('table')) return;
-    const file = this.app.vault.getAbstractFileByPath(ctx.sourcePath);
+    const embed = el.closest?.('.internal-embed.markdown-embed');
+    const target = embed?.getAttribute('src')?.split('#')[0];
+    const file = target
+      ? this.app.metadataCache.getFirstLinkpathDest(target, ctx.sourcePath)
+      : this.app.vault.getAbstractFileByPath(ctx.sourcePath);
     if (!file) return;
     const diskSource = await this.app.vault.cachedRead(file);
     if (this.unloaded) return;
     // Inline rendering can finish before the editor has saved its new source.
     const editor = this.app.workspace.getLeavesOfType('markdown').map(l => l.view)
-      .find(v => v.file?.path === ctx.sourcePath && v.getMode?.() === 'source' && v.editor?.cm?.state.doc.length)?.editor;
-    const candidates = this.memoryTables(editor ? editor.getValue() : diskSource, ctx.sourcePath);
+      .find(v => v.file?.path === file.path && v.getMode?.() === 'source' && v.editor?.cm?.state.doc.length)?.editor;
+    const candidates = this.memoryTables(editor ? editor.getValue() : diskSource, file.path);
     for (const element of el.querySelectorAll('table')) {
       const section = ctx.getSectionInfo(element);
-      const first = element.querySelector('tbody > tr > td')?.textContent?.trim() || '';
-      const count = element.querySelectorAll('tbody > tr').length;
-      const table = candidates.find(candidate => candidate.start === section?.lineStart) ||
-        candidates.find(candidate => candidate.rows.length === count && candidate.rows[0]?.cells[0] === first && candidate.valid);
+      const table = renderedTableCandidate(candidates, element, section);
       if (table) { this.reading.set(element, table); this.schedule(); }
     }
   }
@@ -194,7 +229,13 @@ class MyTableExtended extends Plugin {
       tr.classList.toggle('mte-hidden', hidden[index]);
       tr.classList.toggle('mte-group', !!row.group);
       cell.classList.add('mte-cell');
-      cell.style.setProperty('--mte-depth', row.group ? groupIndent : row.depth + groupIndent);
+      const indent = (row.group ? groupIndent : row.depth + groupIndent) * 22;
+      cell.style.setProperty('--mte-indent', `${indent}px`);
+      if (!cell.dataset.mtePadding) {
+        cell.dataset.mtePadding = cell.style.getPropertyValue('padding-left');
+        cell.dataset.mtePaddingPriority = cell.style.getPropertyPriority('padding-left');
+      }
+      cell.style.setProperty('padding-left', `calc(28px + var(--mte-inset, 0px) + ${indent}px)`, 'important');
       if (!row.hasChildren) return;
       const button = document.createElement('button');
       const closed = folded(row, this.states);
@@ -205,6 +246,7 @@ class MyTableExtended extends Plugin {
       button.dataset.explicit = row.explicit;
       button.dataset.table = table.identity;
       button.dataset.path = table.path;
+      button.style.setProperty('left', `calc(5px + var(--mte-inset, 0px) + ${indent}px)`, 'important');
       if (row.memory) button.dataset.memoryPos = String(row.memory.pos);
       setIcon(button, closed ? 'chevron-right' : 'chevron-down');
       button.title = closed ? '展开子项' : '折叠子项';
@@ -256,7 +298,12 @@ class MyTableExtended extends Plugin {
     for (const prefix of element.querySelectorAll('.mte-group-prefix')) prefix.replaceWith(document.createTextNode(prefix.textContent));
     for (const button of element.querySelectorAll('.mte-toggle')) button.remove();
     for (const prefix of element.querySelectorAll('.mte-prefix')) prefix.replaceWith(document.createTextNode(prefix.textContent));
-    for (const cell of element.querySelectorAll('.mte-cell')) { cell.classList.remove('mte-cell'); cell.style.removeProperty('--mte-depth'); }
+    for (const cell of element.querySelectorAll('.mte-cell')) {
+      cell.classList.remove('mte-cell'); cell.style.removeProperty('--mte-indent');
+      const padding = cell.dataset.mtePadding, priority = cell.dataset.mtePaddingPriority;
+      if (padding) cell.style.setProperty('padding-left', padding, priority); else cell.style.removeProperty('padding-left');
+      delete cell.dataset.mtePadding; delete cell.dataset.mtePaddingPriority;
+    }
     for (const cell of element.querySelectorAll('tbody td')) {
       const guard = this.textSelectionGuards.get(cell);
       if (!guard) continue;

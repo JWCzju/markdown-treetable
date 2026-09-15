@@ -26,7 +26,12 @@ function cellStarts(line) {
 
 function parse(source, path = '', options = {}) {
   const lines = source.split('\n');
-  const tokens = md.parse(source, {});
+  // markdown-it otherwise accepts a following standalone block ID as the last
+  // table row. Keep line offsets intact while excluding IDs from table parsing.
+  const tokenSource = lines.map((line, index) =>
+    /^\^[A-Za-z0-9-]+\s*$/.test(line) && index > 0 && /\|/.test(lines[index - 1]) ? '' : line
+  ).join('\n');
+  const tokens = md.parse(tokenSource, {});
   const tables = [];
   for (let i = 0; i < tokens.length; i++) {
     const token = tokens[i];
