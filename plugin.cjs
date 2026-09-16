@@ -53,6 +53,17 @@ class MyTableExtended extends Plugin {
     this.register(() => this.observer.disconnect());
     this.registerEvent(this.app.workspace.on('layout-change', () => this.schedule()));
     this.registerEvent(this.app.workspace.on('editor-change', () => this.schedule()));
+    // Obsidian may transiently rebuild a focused table-cell editor while the
+    // window is switching applications. Re-scan after focus/visibility returns
+    // so the cell outline is restored without requiring a second click.
+    this.registerDomEvent(window, 'focus', () => {
+      window.setTimeout(() => this.schedule(), 0);
+      window.setTimeout(() => this.schedule(), 120);
+    }, true);
+    this.registerDomEvent(document, 'visibilitychange', () => {
+        window.setTimeout(() => this.schedule(), 0);
+        window.setTimeout(() => this.schedule(), 120);
+    }, true);
     this.registerDomEvent(document, 'compositionstart', () => { this.composing = true; }, true);
     this.registerDomEvent(document, 'compositionend', () => { this.composing = false; this.schedule(); }, true);
     this.selectionPointer = null;
@@ -205,10 +216,14 @@ class MyTableExtended extends Plugin {
       }
       return;
     }
+    const rows = [...element.querySelectorAll('tbody > tr')];
+    // During native cell-editor teardown/rebuild, the DOM can briefly contain
+    // a partial table. Do not clean an already decorated table in that window:
+    // cleanup would remove the cell outline and leave the table unstyled until
+    // the user focuses it again.
+    if (table?.valid && rows.length !== table.rows.length) return;
     this.cleanup(element);
     if (!table?.valid) return;
-    const rows = [...element.querySelectorAll('tbody > tr')];
-    if (rows.length !== table.rows.length) return;
     element.classList.add('mte-table');
     element.classList.toggle('mte-grouped', table.rows.some(row => row.group));
     for (const leaf of this.app.workspace.getLeavesOfType('markdown')) {
