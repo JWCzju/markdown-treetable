@@ -372,7 +372,9 @@ class CellOutline {
       }
       this.plugin.schedule();
     });
-    cm.dispatch({ effects: require('@codemirror/state').StateEffect.appendConfig.of(compartment.of([service, codeFolding(), bullets, remember])) });
+    // CodeMirror rewrites its root class on focus changes. Keep the outline
+    // class in its attribute facet so blur cannot discard the editor styling.
+    cm.dispatch({ effects: require('@codemirror/state').StateEffect.appendConfig.of(compartment.of([EditorView.editorAttributes.of({class: 'mte-outline-editor'}), service, codeFolding(), bullets, remember])) });
     const wrapper = cm.dom.closest('.table-cell-wrapper');
     const address = wrapper && sourceCell(view, wrapper);
     if (address) {
@@ -384,7 +386,6 @@ class CellOutline {
       this.restoring.add(cm);
       try { if (effects.length) cm.dispatch({effects}); } finally { this.restoring.delete(cm); }
     }
-    cm.dom.classList.add('mte-outline-editor');
     this.editors.set(cm, compartment);
   }
   applyFolds(view, wrapper, lines) {
