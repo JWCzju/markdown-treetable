@@ -69,14 +69,14 @@ const bullets = ViewPlugin.fromClass(class {
       foldedRanges(view.state).between(line.to,line.to,from=>{if(from===line.to)closed=true;});
       marks.push(Decoration.widget({widget:new FoldArrow(line.to,view.state.doc.line(end).to,closed),side:-1}).range(line.from));
     }
-    for (let i=1; i<=view.state.doc.lines; i++) { const line=view.state.doc.line(i); const n=node(line.text); if(n) { marks.push(Decoration.line({attributes:{class:'mte-outline-edit-line'+(n.task?' mte-outline-task':'')+(n.checked?' mte-outline-task-done':''),style:outlineStyle(n.depth,ancestorDepths(view.state.doc.toString().split('\n'),i-1))}}).range(line.from)); const prefixEnd=line.from+n.indent.length+n.marker.length+(n.task?5:1); const selected=view.state.selection.ranges.some(r=>!r.empty && r.from<prefixEnd && r.to>line.from); if(selected) continue; if(n.task) marks.push(Decoration.replace({widget:new TaskBox(n.checked,line.from+n.indent.length+n.marker.length+2)}).range(line.from,line.from+n.indent.length+n.marker.length+5)); else if(!/^\d/.test(n.marker)) marks.push(Decoration.replace({widget:new Bullet(line.to,view.state.doc.line(endOfSubtree(view.state.doc,i)).to,(()=>{let closed=false;foldedRanges(view.state).between(line.to,line.to,(from)=>{if(from===line.to)closed=true;});return closed;})())}).range(line.from,line.from+n.indent.length+2)); } }
+    for (let i=1; i<=view.state.doc.lines; i++) { const line=view.state.doc.line(i); const n=node(line.text); if(n) { marks.push(Decoration.line({attributes:{class:'mte-outline-edit-line'+(n.task?' mte-outline-task':'')+(n.checked?' mte-outline-task-done':''),style:outlineStyle(n.depth,ancestorDepths(view.state.doc.toString().split('\n'),i-1))}}).range(line.from)); const prefixEnd=Math.min(line.to,line.from+n.indent.length+n.marker.length+(n.task?5:1)); const selected=view.state.selection.ranges.some(r=>!r.empty && r.from<prefixEnd && r.to>line.from); if(selected) continue; if(n.task) marks.push(Decoration.replace({widget:new TaskBox(n.checked,line.from+n.indent.length+n.marker.length+2)}).range(line.from,prefixEnd)); else if(!/^\d/.test(n.marker)) marks.push(Decoration.replace({widget:new Bullet(line.to,view.state.doc.line(endOfSubtree(view.state.doc,i)).to,(()=>{let closed=false;foldedRanges(view.state).between(line.to,line.to,(from)=>{if(from===line.to)closed=true;});return closed;})())}).range(line.from,line.from+n.indent.length+2)); } }
     this.decorations=Decoration.set(marks, true);
   }
 }, {decorations: value=>value.decorations});
 
 function node(text) {
   const m = /^(\s*(?:>+[+-]?\s+)?)([-+*]|\d+[.)]) (.*)$/.exec(text);
-  return m && { indent: m[1], depth: /^\s*/.exec(m[1])[0].replace(/\t/g, '    ').length, marker: m[2], body: m[3], task: /^\[[ xX]\] /.test(m[3]), checked: /^\[[xX]\]/.test(m[3]) };
+  return m && { indent: m[1], depth: /^\s*/.exec(m[1])[0].replace(/\t/g, '    ').length, marker: m[2], body: m[3], task: /^\[[ xX]\](?:\s|$)/.test(m[3]), checked: /^\[[xX]\]/.test(m[3]) };
 }
 function endOfSubtree(doc, number) {
   const parent = node(doc.line(number).text);
@@ -424,7 +424,7 @@ class CellOutline {
       const col=td.cellIndex; const from=pipes[col]+1; const to=pipes[col+1];
       if(!Number.isFinite(from)||!Number.isFinite(to))return;
       const raw=source.text.slice(from,to); const segments=raw.split(/<br\s*\/?\s*>/i);
-      const segment=segments[itemIndex]; const match=/^\s*(?:>+[+-]?\s+)?[-+*] \[([ xX])\] /.exec(segment||'');
+      const segment=segments[itemIndex]; const match=/^\s*(?:>+[+-]?\s+)?[-+*] \[([ xX])\](?:\s|$)/.exec(segment||'');
       if(!match || /[xX]/.test(match[1])!==checked)return;
       let offset=0; const breaks=[...raw.matchAll(/<br\s*\/?\s*>/gi)];
       if(itemIndex)offset=breaks[itemIndex-1].index+breaks[itemIndex-1][0].length;

@@ -273,12 +273,22 @@ button.mte-outline-arrow:hover { color:var(--text-normal); background:var(--back
 .mte-outline-editor .mte-outline-bullet-widget::before { font-size:var(--font-text-size) !important; }
 
 /* A real caption reserves its own space, never overlays the blank Markdown line. */
-.mte-table-tools { caption-side:top; text-align:left; height:28px; padding:2px 0; }
+.cm-table-widget:has(.mte-table-tools) { padding-top:0 !important; }
+.mte-table-tools { caption-side:top; text-align:left; height:32px; padding:0 0 8px; }
 .mte-table-tools .mte-height-toggle { height:24px; width:28px; padding:3px; border:0; box-shadow:none; background:transparent; color:var(--text-muted); }
 .mte-table-tools .mte-height-toggle svg { width:16px; height:16px; }
 .mte-table-tools .mte-height-toggle[aria-pressed="true"] { color:var(--interactive-accent); background:var(--background-modifier-hover); }
 .mte-compact-summary { display:none; }
 .mte-compact :is(td,th):not(:has(.cm-editor)):not(.mte-compact-open) > :is(.table-cell-wrapper,.mte-compact-body) { display:none !important; }
-.mte-compact :is(td,th):not(:has(.cm-editor)):not(.mte-compact-open) > .mte-compact-summary { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:var(--line-height-normal); }
+.mte-compact :is(td,th):not(:has(.cm-editor)):not(.mte-compact-open) > .mte-compact-summary { display:flex; white-space:nowrap; overflow:hidden; line-height:var(--line-height-normal); }
 /* Bound ellipsis even before the user has assigned explicit column widths. */
 table.mte-compact:not(.mte-width-table) { table-layout:fixed !important; width:100%; }
+
+.mte-summary-text { min-width:0; overflow:hidden; white-space:nowrap; }
+.mte-summary-ellipsis { display:none; flex:none; white-space:pre; color:var(--text-faint); }
+.mte-compact-summary[data-more="true"] > .mte-summary-ellipsis,
+.mte-summary-overflow > .mte-summary-ellipsis { display:inline; }
+/* Match the summary inset when the native cell editor mounts. */
+.mte-compact :is(td,th) .cm-content { padding-inline:0 !important; }
+
+.mte-compact :is(td,th) > .table-cell-wrapper:has(.cm-editor) { padding:0 !important; }

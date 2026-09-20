@@ -102,9 +102,23 @@ test('height toggles edit only the comment and retain table, yaml and code bytes
   const start=parse(source)[0].start;
   const enabled=apply(source,heightChange(source,start,true));
   assert.equal(parse(enabled)[0].singleLine,true);
-  assert.equal(enabled.replace('<!-- height: 1 -->\n\n',''),source);
+  assert.ok(enabled.includes('<!-- height: 1 -->\n\n'));
   assert.deepEqual(heightChange(enabled,parse(enabled)[0].start,true),[]);
   const off=apply(enabled,heightChange(enabled,parse(enabled)[0].start,false));
   assert.equal(parse(off)[0].singleLine,false);
   assert.ok(off.includes(fixture.slice(fixture.indexOf('| Q'))));
+});
+
+test('repeated height toggles preserve preexisting blank separators exactly',()=>{
+  const {heightChange}=require('./row-height.cjs');
+  const table='| Q | A |\n| --- | --- |\n| # Group | |\n| Item | text |';
+  const apply=(s,edits)=>edits.sort((a,b)=>b.from-a.from).reduce((s,e)=>s.slice(0,e.from)+e.insert+s.slice(e.to??e.from),s);
+  for(const prefix of ['# Heading\n\n','Paragraph\n\n','Paragraph\n\n\n','<!-- tree-table -->\n\n']){
+    const original=prefix+table;let s=original;
+    for(let i=0;i<3;i++){
+      s=apply(s,heightChange(s,s.split('\n').findIndex(l=>l.startsWith('|')),true));
+      s=apply(s,heightChange(s,s.split('\n').findIndex(l=>l.startsWith('|')),false));
+      assert.equal(s,original);
+    }
+  }
 });

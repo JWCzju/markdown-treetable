@@ -17,7 +17,19 @@ class CompactTable {
         for(const type of ['pointerdown','mousedown'])button.addEventListener(type,e=>{e.preventDefault();e.stopPropagation();});
         button.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();this.toggle(table);});
       }
+      // A summary is a projection, so its character coordinates are not editor offsets.
+      table.addEventListener('mousedown',r.down=e=>{
+        if(e.button!==0 || !e.target.closest('.mte-compact-summary') || e.target.closest('input,button,a'))return;
+        r.activate=e.target.closest('td,th');e.preventDefault();
+      },true);
       table.addEventListener('click',r.click=e=>{
+        if(r.activate && r.view){
+          const cell=r.activate;r.activate=null;
+          requestAnimationFrame(()=>{
+            const cm=(r.view.currentMode||r.view.editMode)?.tableCell?.editor?.cm;
+            if(cm && cell.contains(cm.dom)){cm.dispatch({selection:{anchor:cm.state.doc.length}});cm.focus();}
+          });
+        }
         if(view || e.target.closest('button,a,input'))return;
         const cell=e.target.closest('td,th');if(!cell)return;
         table.querySelectorAll('.mte-compact-open').forEach(c=>{if(c!==cell)c.classList.remove('mte-compact-open');});
@@ -47,8 +59,21 @@ class CompactTable {
       const row=model.rows[cell.parentElement.sectionRowIndex];
       if(cell.parentElement.parentElement.tagName==='TBODY' && cell.cellIndex===model.col && row?.prefix && first.startsWith(row.prefix))first=first.slice(row.prefix.length);
       first=first.replace(/^[-*+] \[([ xX])\] /,(_,x)=>x===' '?'☐ ':'☑ ').replace(/^[-*+] /,'');
-      const text=first+(lines.length>1?'…':'');
-      if(summary.textContent!==text)summary.textContent=text;
+      const text=first, more=lines.length>1;
+      if(summary.dataset.text!==text || summary.dataset.more!==String(more)){
+        summary.dataset.text=text;summary.dataset.more=String(more);summary.replaceChildren();
+        const label=document.createElement('span');label.className='mte-summary-text';label.textContent=text;summary.append(label);
+        const ellipsis=document.createElement('span');ellipsis.className='mte-summary-ellipsis';ellipsis.textContent=' …';ellipsis.setAttribute('aria-label','还有内容，点击展开');summary.append(ellipsis);
+      }
+      // Keep standalone tasks actionable even in the compact projection.
+      const box=body.querySelector('input[type=checkbox]');
+      if(box && /^\s*[☐☑]\s*$/.test(text)){
+        let proxy=summary.querySelector('input');
+        if(!proxy){proxy=box.cloneNode();proxy.addEventListener('mousedown',e=>{e.preventDefault();e.stopPropagation();});proxy.addEventListener('click',e=>{e.stopPropagation();box.click();});summary.replaceChildren(proxy);}
+        proxy.checked=box.checked;
+      }
+      const label=summary.querySelector('.mte-summary-text');
+      if(label)summary.classList.toggle('mte-summary-overflow',label.scrollWidth>label.clientWidth+1);
     }
   }
   toggle(table){
@@ -63,7 +88,7 @@ class CompactTable {
     cm.dispatch({changes:heightChange(source,start,!model.singleLine),annotations:isolateHistory.of('full'),userEvent:'input'});
     this.plugin.schedule();
   }
-  clean(table){const r=this.records.get(table);r?.caption?.remove();if(r)table.removeEventListener('click',r.click);table.classList.remove('mte-compact');table.querySelectorAll('.mte-compact-summary').forEach(e=>e.remove());table.querySelectorAll('.mte-compact-body').forEach(e=>e.replaceWith(...e.childNodes));table.querySelectorAll('.mte-compact-open').forEach(e=>e.classList.remove('mte-compact-open'));this.records.delete(table);}
+  clean(table){const r=this.records.get(table);r?.caption?.remove();if(r){table.removeEventListener('click',r.click);table.removeEventListener('mousedown',r.down,true);}table.classList.remove('mte-compact');table.querySelectorAll('.mte-compact-summary').forEach(e=>e.remove());table.querySelectorAll('.mte-compact-body').forEach(e=>e.replaceWith(...e.childNodes));table.querySelectorAll('.mte-compact-open').forEach(e=>e.classList.remove('mte-compact-open'));this.records.delete(table);}
   prune(){for(const [t]of this.records)if(!t.isConnected)this.clean(t);}
   destroy(){for(const [t]of this.records)this.clean(t);}
 }

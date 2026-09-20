@@ -13,7 +13,12 @@ function heightMetadata(lines, start) {
 function heightChange(source, start, enabled) {
   const lines = source.split('\n'), meta = heightMetadata(lines, start);
   const offset = line => lines.slice(0, line).reduce((n, s) => n + s.length + 1, 0);
-  if (enabled) return meta.lines.length ? [] : [{from:offset(start), insert:'<!-- height: 1 -->\n\n'}];
-  return meta.lines.map(line => ({from:offset(line), to:offset(line) + lines[line].length + 1 + (lines[line+1] === '' ? 1 : 0), insert:''}));
+  if (enabled) {
+    if (meta.lines.length) return [];
+    // Reuse the existing separator instead of adding a second blank line.
+    const separator = start > 0 && lines[start - 1] === '';
+    return [{from:offset(separator ? start - 1 : start), insert:'<!-- height: 1 -->\n' + (separator ? '' : '\n')}];
+  }
+  return meta.lines.map(line => ({from:offset(line), to:offset(line) + lines[line].length + 1, insert:''}));
 }
 module.exports = {heightMetadata, heightChange};
