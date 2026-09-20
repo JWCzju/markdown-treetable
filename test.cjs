@@ -83,3 +83,28 @@ test('bounded 200 row table parses without losing source rows', () => {
   assert.equal(table.rows.length, 200);
   assert.equal(table.valid, true);
 });
+
+test('height metadata preserves legacy identity and does not leak across prose or fences', () => {
+  for (const meta of ['<!-- height:1 -->','<!-- height: 1 -->']) {
+    const source=fixture.replace('\n\n| Q', '\n'+meta+'\n\n| Q');
+    const table=parse(source,'test.md')[0];
+    assert.equal(table.singleLine,true);assert.equal(table.identity,'test');assert.equal(table.col,0);
+    assert.equal(parse(source.replace(meta,meta+'\nprose'),'test.md').length,0);
+  }
+  const auto='<!-- height: 1 -->\n\n| Q | A |\n| --- | --- |\n| # Group | |\n| Item | one<br>two |';
+  assert.equal(parse(auto,'a.md',{autoDetect:true})[0].singleLine,true);
+  assert.equal(parse('```\n'+auto+'\n```','a.md',{autoDetect:true}).length,0);
+});
+test('height toggles edit only the comment and retain table, yaml and code bytes', () => {
+  const {heightChange}=require('./row-height.cjs');
+  const source='---\na: b\n---\n\n'+fixture+'\n^id\n\n```\n<!-- height: 1 -->\n```';
+  const apply=(s,edits)=>edits.sort((a,b)=>b.from-a.from).reduce((s,e)=>s.slice(0,e.from)+e.insert+s.slice(e.to??e.from),s);
+  const start=parse(source)[0].start;
+  const enabled=apply(source,heightChange(source,start,true));
+  assert.equal(parse(enabled)[0].singleLine,true);
+  assert.equal(enabled.replace('<!-- height: 1 -->\n\n',''),source);
+  assert.deepEqual(heightChange(enabled,parse(enabled)[0].start,true),[]);
+  const off=apply(enabled,heightChange(enabled,parse(enabled)[0].start,false));
+  assert.equal(parse(off)[0].singleLine,false);
+  assert.ok(off.includes(fixture.slice(fixture.indexOf('| Q'))));
+});

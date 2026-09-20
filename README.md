@@ -76,3 +76,14 @@ Validation caught and corrected a one-character replacement range overflow on em
 tasks. Sandbox reload and fresh error check pass after the correction. Preview click
 and Enter persistence were observed; full uninterrupted interaction acceptance remains
 necessary before promotion. Reading-view checkbox support remains outside this build.
+
+
+### Single-line row height
+
+The top-left table button toggles compact rows (off by default). It writes only
+`<!-- height: 1 -->` before the table, without column/id parameters or JSON state.
+Existing tree-table declarations remain compatible; auto-detected grouped tables
+need no extra declaration. Clicking a cell opens the native full editor; leaving
+the cell restores its one-line summary. Window blur keeps the active editor open.
+The switch is an isolated Markdown undo/redo step. Reading views render compact
+rows too; click a cell to reveal it. The switch itself is available in Live Preview.

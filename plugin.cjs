@@ -3,6 +3,7 @@ const { parse, folded, visibility } = require('./model.cjs');
 const { ColumnWidths } = require('./column-widths.cjs');
 const { FoldMemory } = require('./fold-memory.cjs');
 const { EditorView } = require('@codemirror/view');
+const { CompactTable } = require('./compact-table.cjs');
 const { CellOutline } = require('./cell-outline.cjs');
 
 function renderedTableCandidate(candidates, element, info) {
@@ -43,6 +44,7 @@ class MyTableExtended extends Plugin {
     this.adapters = new Map();
     this.cellOutline = new CellOutline(this);
     this.columnWidths = new ColumnWidths(this);
+    this.compactTable = new CompactTable(this);
     this.textSelectionGuards = new Map();
     this.reading = new Map();
     this.embeds = new WeakSet();
@@ -112,6 +114,7 @@ class MyTableExtended extends Plugin {
   scanLiveTables() {
     if (this.composing) return;
     this.observer.disconnect();
+    this.compactTable.prune();
     try {
       for (const [table, originals] of this.adapters) if (!table.tableEl?.isConnected) { Object.assign(table, originals); this.adapters.delete(table); }
       for (const [element, table] of this.reading) {
@@ -223,7 +226,7 @@ class MyTableExtended extends Plugin {
     // the user focuses it again.
     if (table?.valid && rows.length !== table.rows.length) return;
     this.cleanup(element);
-    if (!table?.valid) return;
+    if (!table?.valid) { this.compactTable.clean(element); return; }
     element.classList.add('mte-table');
     element.classList.toggle('mte-grouped', table.rows.some(row => row.group));
     for (const leaf of this.app.workspace.getLeavesOfType('markdown')) {
@@ -273,6 +276,7 @@ class MyTableExtended extends Plugin {
     // Let the browser own text drag selection inside tree-table cells. Obsidian's
     // table editor otherwise treats a drag as a multi-cell selection.
     this.guardTextSelection(element);
+    this.compactTable.apply(element, table);
   }
 
   guardTextSelection(element) {
@@ -286,7 +290,7 @@ class MyTableExtended extends Plugin {
     table.rows.forEach((row, index) => {
       if (!row.prefix) return;
       const cell = rows[index]?.cells[table.col];
-      const wrapper = cell?.querySelector(':scope > .table-cell-wrapper') || (element.classList.contains('table-editor') ? null : cell);
+      const wrapper = cell?.querySelector(':scope > .table-cell-wrapper, :scope > .mte-compact-body') || (element.classList.contains('table-editor') ? null : cell);
       if (!wrapper || wrapper.querySelector('.cm-editor') || wrapper.isContentEditable) return;
       const node = wrapper.firstChild;
       if (row.group && node && node.nodeType === Node.TEXT_NODE && node.textContent.startsWith(row.prefix)) {
@@ -461,6 +465,7 @@ class MyTableExtended extends Plugin {
     this.unloaded = true;
     clearTimeout(this.memorySaveTimer);
     this.saveState();
+    this.compactTable.destroy();
     this.cellOutline.destroy();
     this.columnWidths.destroy();
     this.observer.disconnect();

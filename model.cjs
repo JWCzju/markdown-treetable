@@ -39,7 +39,9 @@ function parse(source, path = '', options = {}) {
     const start = token.map[0];
     let previous = start - 1;
     while (previous >= 0 && !lines[previous].trim()) previous--;
+    while (previous >= 0 && (/^\s*<!--\s*height\s*:\s*1\s*-->\s*$/.test(lines[previous]) || !lines[previous].trim())) previous--;
     const marker = lines[previous]?.match(/^\s*<!--\s*tree-table(?:\s+column=(?:"([^"]+)"|([0-9]+)))?(?:\s+id="([a-zA-Z0-9_-]+)")?\s*-->\s*$/);
+    const height = require('./row-height.cjs').heightMetadata(lines, start);
     const firstData = lines[start + 2] || '';
     const firstCell = firstData.split('|')[1]?.trim() || '';
     const auto = !marker && options.autoDetect && /^(?:#{1,3}\s+|>+\s+)/.test(firstCell);
@@ -77,7 +79,7 @@ function parse(source, path = '', options = {}) {
     // The table ordinal is stable while editing its content. An explicit id remains
     // available when tables are frequently reordered within the same note.
     const identity = marker?.[3] || `table-${tables.length}`;
-    const table = { start, end: token.map[1], col, headers, rows, valid: auto ? true : valid, identity, path };
+    const table = { start, end: token.map[1], col, headers, rows, valid: auto ? true : valid, identity, path, singleLine: height.lines.length > 0 };
     const occurrences = new Map();
     for (const row of rows) {
       row.occurrence = occurrences.get(row.identity) || 0;
