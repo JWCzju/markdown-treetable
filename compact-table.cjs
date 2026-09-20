@@ -40,6 +40,7 @@ class CompactTable {
     table.classList.toggle('mte-compact',model.singleLine);
     if(r.button){r.button.setAttribute('aria-pressed',String(model.singleLine));r.button.setAttribute('aria-label','单行展示');r.button.title=model.singleLine?'单行展示：已开启（点击恢复自动行高）':'单行展示：已关闭';}
     if(!model.singleLine){table.querySelectorAll('.mte-compact-summary').forEach(e=>e.remove());return;}
+    const measurements=[];
     for(const cell of table.querySelectorAll(':scope > tbody > tr > td, :scope > thead > tr > th')){
       const wrapper=cell.querySelector(':scope > .table-cell-wrapper');
       // Reading-mode cells have no native wrapper. Preserve original nodes.
@@ -73,8 +74,13 @@ class CompactTable {
         proxy.checked=box.checked;
       }
       const label=summary.querySelector('.mte-summary-text');
-      if(label)summary.classList.toggle('mte-summary-overflow',label.scrollWidth>label.clientWidth+1);
+      if(label)measurements.push({summary,label,more});
     }
+    // Finish every DOM write before reading geometry. Alternating writes and
+    // reads per cell forces a full table layout once for every cell.
+    const overflow=measurements.map(({summary,label,more})=>({summary,
+      value:label.scrollWidth > (more ? label.clientWidth : summary.clientWidth)+1}));
+    for(const {summary,value} of overflow)summary.classList.toggle('mte-summary-overflow',value);
   }
   toggle(table){
     const r=this.records.get(table),v=r?.view,cm=v?.editor?.cm;

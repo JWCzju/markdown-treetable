@@ -1,5 +1,5 @@
 // Table-local presentation metadata; never rewrite the table body.
-const HEIGHT = /^\s*<!--\s*height\s*:\s*1\s*-->\s*$/;
+const HEIGHT = /^\s*<!--\s*(?:treeTable\s+)?height\s*:\s*1\s*-->\s*$/;
 function heightMetadata(lines, start) {
   const found = [];
   for (let i = start - 1; i >= 0; i--) {
@@ -17,8 +17,8 @@ function heightChange(source, start, enabled) {
     if (meta.lines.length) return [];
     // Reuse the existing separator instead of adding a second blank line.
     const separator = start > 0 && lines[start - 1] === '';
-    return [{from:offset(separator ? start - 1 : start), insert:'<!-- height: 1 -->\n' + (separator ? '' : '\n')}];
+    return [{from:offset(separator ? start - 1 : start), insert:'<!-- treeTable height: 1 -->\n' + (separator ? '' : '\n')}];
   }
   return meta.lines.map(line => ({from:offset(line), to:offset(line) + lines[line].length + 1, insert:''}));
 }
-module.exports = {heightMetadata, heightChange};
+module.exports = {HEIGHT, heightMetadata, heightChange};

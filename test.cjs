@@ -85,7 +85,7 @@ test('bounded 200 row table parses without losing source rows', () => {
 });
 
 test('height metadata preserves legacy identity and does not leak across prose or fences', () => {
-  for (const meta of ['<!-- height:1 -->','<!-- height: 1 -->']) {
+  for (const meta of ['<!-- height:1 -->','<!-- height: 1 -->','<!-- treeTable height: 1 -->']) {
     const source=fixture.replace('\n\n| Q', '\n'+meta+'\n\n| Q');
     const table=parse(source,'test.md')[0];
     assert.equal(table.singleLine,true);assert.equal(table.identity,'test');assert.equal(table.col,0);
@@ -102,7 +102,7 @@ test('height toggles edit only the comment and retain table, yaml and code bytes
   const start=parse(source)[0].start;
   const enabled=apply(source,heightChange(source,start,true));
   assert.equal(parse(enabled)[0].singleLine,true);
-  assert.ok(enabled.includes('<!-- height: 1 -->\n\n'));
+  assert.ok(enabled.includes('<!-- treeTable height: 1 -->\n\n'));
   assert.deepEqual(heightChange(enabled,parse(enabled)[0].start,true),[]);
   const off=apply(enabled,heightChange(enabled,parse(enabled)[0].start,false));
   assert.equal(parse(off)[0].singleLine,false);

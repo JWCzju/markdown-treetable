@@ -39,7 +39,7 @@ function parse(source, path = '', options = {}) {
     const start = token.map[0];
     let previous = start - 1;
     while (previous >= 0 && !lines[previous].trim()) previous--;
-    while (previous >= 0 && (/^\s*<!--\s*height\s*:\s*1\s*-->\s*$/.test(lines[previous]) || !lines[previous].trim())) previous--;
+    while (previous >= 0 && (require('./row-height.cjs').HEIGHT.test(lines[previous]) || !lines[previous].trim())) previous--;
     const marker = lines[previous]?.match(/^\s*<!--\s*tree-table(?:\s+column=(?:"([^"]+)"|([0-9]+)))?(?:\s+id="([a-zA-Z0-9_-]+)")?\s*-->\s*$/);
     const height = require('./row-height.cjs').heightMetadata(lines, start);
     const firstData = lines[start + 2] || '';
