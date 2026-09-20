@@ -33,6 +33,7 @@ function parse(source, path = '', options = {}) {
   ).join('\n');
   const tokens = md.parse(tokenSource, {});
   const tables = [];
+  let treeOrdinal = 0;
   for (let i = 0; i < tokens.length; i++) {
     const token = tokens[i];
     if (token.type !== 'table_open' || token.level !== 0) continue;
@@ -45,7 +46,8 @@ function parse(source, path = '', options = {}) {
     const firstData = lines[start + 2] || '';
     const firstCell = firstData.split('|')[1]?.trim() || '';
     const auto = !marker && options.autoDetect && /^(?:#{1,3}\s+|>+\s+)/.test(firstCell);
-    if (!marker && !auto) continue;
+    const tree = !!(marker || auto);
+    if (!tree && !options.includePlain) continue;
     const headers = [], rows = [];
     let current = null, inHead = false;
     for (let j = i + 1; j < tokens.length && tokens[j].type !== 'table_close'; j++) {
@@ -54,6 +56,11 @@ function parse(source, path = '', options = {}) {
       if (t.type === 'thead_close') inHead = false;
       if (t.type === 'tr_open') { current = []; if (!inHead) rows.push({ cells: current, line: t.map?.[0] ?? start + 2 + rows.length }); }
       if (t.type === 'inline') (inHead ? headers : current)?.push(t.content.trim());
+    }
+    if (!tree) {
+      tables.push({start, end:token.map[1], headers, rows, valid:true, tree:false,
+        identity:`plain-${start}`, path, singleLine:height.lines.length > 0});
+      continue;
     }
     const columnSpec = marker ? (marker[1] ?? marker[2]) : 0;
     const col = columnSpec == null ? 0 : (/^\d+$/.test(columnSpec) ? Number(columnSpec) : headers.indexOf(columnSpec));
@@ -78,8 +85,9 @@ function parse(source, path = '', options = {}) {
     }
     // The table ordinal is stable while editing its content. An explicit id remains
     // available when tables are frequently reordered within the same note.
-    const identity = marker?.[3] || `table-${tables.length}`;
-    const table = { start, end: token.map[1], col, headers, rows, valid: auto ? true : valid, identity, path, singleLine: height.lines.length > 0 };
+    const identity = marker?.[3] || `table-${treeOrdinal}`;
+    treeOrdinal++;
+    const table = { tree:true, start, end: token.map[1], col, headers, rows, valid: auto ? true : valid, identity, path, singleLine: height.lines.length > 0 };
     const occurrences = new Map();
     for (const row of rows) {
       row.occurrence = occurrences.get(row.identity) || 0;

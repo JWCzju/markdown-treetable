@@ -89,3 +89,5 @@ The switch is an isolated Markdown undo/redo step. Reading views render compact
 rows too; click a cell to reveal it. The switch itself is available in Live Preview.
 
 The earlier unnamespaced `<!-- height: 1 -->` is still readable; new toggles write the namespaced form.
+
+Single-line row height is available on ordinary Markdown tables as well as TreeTables. It does not enable tree grouping or hierarchy for ordinary tables.

@@ -132,7 +132,7 @@ class MyTableExtended extends Plugin {
         this.foldMemory.sync(view.file.path, cm.state.doc.toString());
         this.cellOutline.scan(view);
         this.columnWidths.scan(view);
-        const model = this.memoryTables(cm.state.doc.toString(), view.file.path);
+        const model = this.memoryTables(cm.state.doc.toString(), view.file.path, true);
         for (const element of view.containerEl.querySelectorAll('table.table-editor')) {
           try {
             const start = cm.state.doc.lineAt(cm.posAtDOM(element)).number - 1;
@@ -167,7 +167,7 @@ class MyTableExtended extends Plugin {
     if (!file) return;
     const source = await this.app.vault.cachedRead(file);
     if (this.unloaded || !embed.isConnected) return;
-    const candidates = this.memoryTables(source, file.path);
+    const candidates = this.memoryTables(source, file.path, true);
     for (const element of embed.querySelectorAll('table')) {
       const table = renderedTableCandidate(candidates, element);
       if (table) this.reading.set(element, table);
@@ -187,7 +187,7 @@ class MyTableExtended extends Plugin {
     // Inline rendering can finish before the editor has saved its new source.
     const editor = this.app.workspace.getLeavesOfType('markdown').map(l => l.view)
       .find(v => v.file?.path === file.path && v.getMode?.() === 'source' && v.editor?.cm?.state.doc.length)?.editor;
-    const candidates = this.memoryTables(editor ? editor.getValue() : diskSource, file.path);
+    const candidates = this.memoryTables(editor ? editor.getValue() : diskSource, file.path, true);
     for (const element of el.querySelectorAll('table')) {
       const section = ctx.getSectionInfo(element);
       const table = renderedTableCandidate(candidates, element, section);
@@ -195,9 +195,9 @@ class MyTableExtended extends Plugin {
     }
   }
 
-  memoryTables(source, path) {
+  memoryTables(source, path, includePlain = false) {
     const nodes = this.foldMemory.sync(path, source);
-    const tables = parse(source, path, {autoDetect: this.autoDetectTree});
+    const tables = parse(source, path, {autoDetect: this.autoDetectTree, includePlain});
     for (const table of tables) for (const row of table.rows) {
       row.memory = nodes.find(n => n.kind === 'tree' && n.rowKey === row.key);
       if (row.memory) this.states[row.key] = {closed: this.foldMemory.get(path, row.memory), explicit: row.explicit};
@@ -227,6 +227,7 @@ class MyTableExtended extends Plugin {
     if (table?.valid && rows.length !== table.rows.length) return;
     this.cleanup(element);
     if (!table?.valid) { this.compactTable.clean(element); return; }
+    if (table.tree === false) { this.compactTable.apply(element, table); return; }
     element.classList.add('mte-table');
     element.classList.toggle('mte-grouped', table.rows.some(row => row.group));
     for (const leaf of this.app.workspace.getLeavesOfType('markdown')) {

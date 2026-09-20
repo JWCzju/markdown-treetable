@@ -122,3 +122,19 @@ test('repeated height toggles preserve preexisting blank separators exactly',()=
     }
   }
 });
+
+test('plain tables opt into presentation without acquiring tree semantics or changing tree keys',()=>{
+  const plain='| Name | Notes |\n| --- | --- |\n| normal | one<br>two |\n| > literal | text |';
+  const tree='<!-- tree-table -->\n\n| Q | A |\n| --- | --- |\n| Root | |\n| > Child | |';
+  const source=plain+'\n\n'+tree;
+  const legacy=parse(source,'a.md');
+  const all=parse(source,'a.md',{includePlain:true});
+  assert.equal(all.length,2);assert.equal(all[0].tree,false);
+  assert.equal(all[0].rows[1].cells[0],'> literal');
+  assert.equal(all[0].rows[1].depth,undefined);
+  assert.equal(all[1].identity,legacy[0].identity);
+  assert.deepEqual(all[1].rows.map(r=>r.key),legacy[0].rows.map(r=>r.key));
+  const compact=parse('<!-- treeTable height: 1 -->\n\n'+plain,'a.md',{includePlain:true});
+  assert.equal(compact[0].singleLine,true);
+  assert.equal(parse('```md\n'+plain+'\n```','a.md',{includePlain:true}).length,0);
+});

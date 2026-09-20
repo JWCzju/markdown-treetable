@@ -104,7 +104,7 @@ class CompactTable {
     // across edits above this table.
     let start;try{start=cm.state.doc.lineAt(cm.posAtDOM(table)).number-1;}catch{return;}
     const source=cm.state.doc.toString();
-    const model=this.plugin.memoryTables(source,v.file.path).find(t=>t.start===start);
+    const model=this.plugin.memoryTables(source,v.file.path,true).find(t=>t.start===start);
     if(!model)return;
     cm.dispatch({changes:heightChange(source,start,!model.singleLine),annotations:isolateHistory.of('full'),userEvent:'input'});
     this.plugin.schedule();
