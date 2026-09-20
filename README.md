@@ -91,3 +91,5 @@ rows too; click a cell to reveal it. The switch itself is available in Live Prev
 The earlier unnamespaced `<!-- height: 1 -->` is still readable; new toggles write the namespaced form.
 
 Single-line row height is available on ordinary Markdown tables as well as TreeTables. It does not enable tree grouping or hierarchy for ordinary tables.
+
+Automatic columns hug rendered content up to 550px (the former table CSS threshold). Change “自动列宽上限（px）” in settings. Explicit header widths override this limit. Dragging a column writes only that column; other columns remain automatic.

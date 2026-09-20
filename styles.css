@@ -282,7 +282,7 @@ button.mte-outline-arrow:hover { color:var(--text-normal); background:var(--back
 .mte-compact :is(td,th):not(:has(.cm-editor)):not(.mte-compact-open) > :is(.table-cell-wrapper,.mte-compact-body) { display:none !important; }
 .mte-compact :is(td,th):not(:has(.cm-editor)):not(.mte-compact-open) > .mte-compact-summary { display:flex; white-space:nowrap; overflow:hidden; line-height:var(--line-height-normal); }
 /* Bound ellipsis even before the user has assigned explicit column widths. */
-table.mte-compact:not(.mte-width-table) { table-layout:fixed !important; width:100%; }
+
 
 .mte-summary-text { min-width:0; overflow:hidden; white-space:nowrap; }
 .mte-summary-ellipsis { display:none; flex:none; white-space:pre; color:var(--text-faint); }
@@ -302,3 +302,5 @@ table.mte-compact:not(.mte-width-table) { table-layout:fixed !important; width:1
 
 /* Reading mode uses the same content box as the native Live Preview table. */
 .mte-table .mte-reading-cell { padding:4px 8px; line-height:var(--line-height-normal); }
+
+.mte-width-measure * { white-space:nowrap !important; max-width:none !important; }

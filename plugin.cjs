@@ -39,6 +39,7 @@ class MyTableExtended extends Plugin {
     }));
     this.registerEvent(this.app.vault.on('delete', file => this.foldMemory.remove(file.path)));
     this.cellMarkdownGlobal = saved?.cellMarkdownGlobal ?? true;
+    this.autoColumnMaxWidth = saved?.autoColumnMaxWidth || 550;
     this.autoDetectTree = saved?.autoDetectTree ?? true;
     this.addSettingTab(new CellSettings(this.app, this));
     this.adapters = new Map();
@@ -422,7 +423,7 @@ class MyTableExtended extends Plugin {
   }
 
   saveState() {
-    const data = JSON.parse(JSON.stringify({ foldMemory: this.foldMemory.data, legacyFoldState: this.legacyFoldState, cellMarkdownGlobal: this.cellMarkdownGlobal, autoDetectTree: this.autoDetectTree }));
+    const data = JSON.parse(JSON.stringify({ foldMemory: this.foldMemory.data, legacyFoldState: this.legacyFoldState, cellMarkdownGlobal: this.cellMarkdownGlobal, autoDetectTree: this.autoDetectTree, autoColumnMaxWidth: this.autoColumnMaxWidth }));
     this.saveQueue = (this.saveQueue || Promise.resolve()).then(() => this.saveData(data)).catch(error => console.error('My Table Extended: state save failed', error));
     return this.saveQueue;
   }
@@ -491,6 +492,10 @@ class MyTableExtended extends Plugin {
 class CellSettings extends PluginSettingTab {
   display() {
     this.containerEl.empty();
+    new Setting(this.containerEl).setName('自动列宽上限（px）').setDesc('未指定宽度的列按内容伸展，到此宽度换行。默认 550，沿用旧表格 CSS；手动列宽优先。').addText(text=>text.setValue(String(this.plugin.autoColumnMaxWidth)).onChange(async value=>{
+      const n=Number(value);if(!Number.isFinite(n)||n<60||n>2400)return;
+      this.plugin.autoColumnMaxWidth=Math.round(n);this.plugin.columnWidths.autoWidths.clear();await this.plugin.saveState();this.plugin.schedule();
+    }));
     new Setting(this.containerEl).setName('所有表格启用 cell 列表和待办增强').setDesc('关闭时，仅增强包含 <!-- cell-markdown --> 的笔记。开关会重新加载插件以清理编辑器装饰。').addToggle(toggle=>toggle.setValue(this.plugin.cellMarkdownGlobal).onChange(async value=>{
       this.plugin.cellMarkdownGlobal=value;
       await this.plugin.saveState();

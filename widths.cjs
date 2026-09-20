@@ -10,12 +10,13 @@ function cells(line) {
 }
 function tables(source) {
   const lines=source.split('\n');
-  return parser.parse(source,{}).filter(t=>t.type==='table_open' && t.level===0).map(t=>({line:t.map[0],end:t.map[1],raw:lines[t.map[0]],cells:cells(lines[t.map[0]])}));
+  return parser.parse(source,{}).filter(t=>t.type==='table_open' && t.level===0).map(t=>({line:t.map[0],end:t.map[1],raw:lines[t.map[0]],source:lines.slice(t.map[0],t.map[1]).join('\n'),cells:cells(lines[t.map[0]])}));
 }
 function setWidths(line,widths) {
   let result=line;
   const list=cells(line);
   for(let i=list.length-1;i>=0;i--) {
+    if(widths[i]==null)continue;
     const c=list[i];const value=clamp(widths[i]);
     const text=WIDTH.test(c.text)?c.text.replace(WIDTH,`<!-- width=${value} -->`):c.text.trimEnd()+` <!-- width=${value} --> `;
     result=result.slice(0,c.from)+text+result.slice(c.to);
