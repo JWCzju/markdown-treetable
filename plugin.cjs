@@ -206,6 +206,16 @@ class MyTableExtended extends Plugin {
   }
 
   decorate(element, table) {
+    // Reading cells lack the native editor's inner content box. Match its
+    // typography and padding without changing row/column or fold ownership.
+    if(table?.valid && table.tree !== false && !element.classList.contains('table-editor')) {
+      for(const cell of element.querySelectorAll(':scope > thead > tr > th, :scope > tbody > tr > td')) {
+        if(cell.querySelector(':scope > .mte-reading-cell'))continue;
+        const content=document.createElement('div');content.className='table-cell-wrapper mte-reading-cell';
+        for(const node of [...cell.childNodes])if(!node.classList?.contains('mte-toggle')&&!node.classList?.contains('mte-width-grip'))content.append(node);
+        cell.prepend(content);
+      }
+    }
     // Rich embeds can settle asynchronously after the Markdown cell is mounted.
     // Preserve the current DOM until every image has a stable intrinsic size.
     // complete is an HTMLImageElement property, not an HTML attribute. Cached
@@ -467,6 +477,7 @@ class MyTableExtended extends Plugin {
     clearTimeout(this.memorySaveTimer);
     this.saveState();
     this.compactTable.destroy();
+    for(const wrapper of document.querySelectorAll('.mte-reading-cell'))wrapper.replaceWith(...wrapper.childNodes);
     this.cellOutline.destroy();
     this.columnWidths.destroy();
     this.observer.disconnect();

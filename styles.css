@@ -299,3 +299,6 @@ table.mte-compact:not(.mte-width-table) { table-layout:fixed !important; width:1
 .mte-summary-text > .mte-outline-preview-line { white-space:nowrap !important; }
 .mte-summary-text .mte-outline-preview-line.mte-cell-fold-closed::after { content:none; }
 .mte-summary-text .mte-task-body { white-space:nowrap; }
+
+/* Reading mode uses the same content box as the native Live Preview table. */
+.mte-table .mte-reading-cell { padding:4px 8px; line-height:var(--line-height-normal); }
