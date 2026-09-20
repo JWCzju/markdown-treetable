@@ -49,30 +49,45 @@ class CompactTable {
       if(body.querySelector('.cm-editor'))continue;
       let summary=cell.querySelector(':scope > .mte-compact-summary');
       if(!summary){summary=document.createElement('span');summary.className='mte-compact-summary';cell.append(summary);}
-      const clone=body.cloneNode(true);
-      clone.querySelectorAll('button,.mte-prefix,.mte-group-prefix,.mte-outline-marker').forEach(n=>n.remove());
-      clone.querySelectorAll('br').forEach(n=>n.replaceWith('\n'));
-      clone.querySelectorAll('.mte-outline-preview-line').forEach(n=>n.append('\n'));
-      clone.querySelectorAll('img').forEach(n=>n.replaceWith('[图片]'));
-      clone.querySelectorAll('input[type=checkbox]').forEach(n=>n.replaceWith(n.checked?'☑ ':'☐ '));
-      const lines=clone.textContent.split('\n').map(s=>s.trim()).filter(Boolean);
-      let first=lines[0]||'';
-      const row=model.rows[cell.parentElement.sectionRowIndex];
-      if(cell.parentElement.parentElement.tagName==='TBODY' && cell.cellIndex===model.col && row?.prefix && first.startsWith(row.prefix))first=first.slice(row.prefix.length);
-      first=first.replace(/^[-*+] \[([ xX])\] /,(_,x)=>x===' '?'☐ ':'☑ ').replace(/^[-*+] /,'');
-      const text=first, more=lines.length>1;
-      if(summary.dataset.text!==text || summary.dataset.more!==String(more)){
-        summary.dataset.text=text;summary.dataset.more=String(more);summary.replaceChildren();
-        const label=document.createElement('span');label.className='mte-summary-text';label.textContent=text;summary.append(label);
+      // Project the rendered first line, retaining its visual and semantic nodes.
+      // Never flatten controls or inline formatting into text glyphs.
+      const firstNode=[...body.childNodes].find(n=>n.nodeType!==3 || n.textContent.trim());
+      const firstLine=firstNode?.matches?.('.mte-outline-preview-line') ? firstNode : null;
+      const fragment=document.createElement('span');
+      if(firstLine){fragment.append(firstLine.cloneNode(true));}
+      else {
+        for(const child of body.childNodes){
+          if(child.nodeName==='BR')break;
+          fragment.append(child.cloneNode(true));
+        }
+      }
+      fragment.querySelectorAll('.mte-prefix,.mte-group-prefix,.mte-width-meta').forEach(n=>n.remove());
+      fragment.querySelectorAll('.internal-embed.image-embed,img').forEach(n=>n.replaceWith('[图片]'));
+      const more=firstLine
+        ? [...body.children].some(n=>n!==firstLine && n.matches('.mte-outline-preview-line'))
+        : [...body.childNodes].some((n,i,all)=>n.nodeName==='BR' && all.slice(i+1).some(x=>x.textContent.trim()||x.querySelector?.('input,img')));
+      const originals=[...(firstLine||body).querySelectorAll('input[type=checkbox],.mte-cell-fold-hit,.mte-arrow-hit')];
+      const signature=fragment.innerHTML+originals.map(n=>n.checked??'').join(',');
+      if(summary._richSignature!==signature){
+        summary._richSignature=signature;summary.dataset.more=String(more);summary.replaceChildren();
+        fragment.className='mte-summary-text';summary.append(fragment);
         const ellipsis=document.createElement('span');ellipsis.className='mte-summary-ellipsis';ellipsis.textContent=' …';ellipsis.setAttribute('aria-label','还有内容，点击展开');summary.append(ellipsis);
       }
-      // Keep standalone tasks actionable even in the compact projection.
-      const box=body.querySelector('input[type=checkbox]');
-      if(box && /^\s*[☐☑]\s*$/.test(text)){
-        let proxy=summary.querySelector('input');
-        if(!proxy){proxy=box.cloneNode();proxy.addEventListener('mousedown',e=>{e.preventDefault();e.stopPropagation();});proxy.addEventListener('click',e=>{e.stopPropagation();box.click();});summary.replaceChildren(proxy);}
-        proxy.checked=box.checked;
-      }
+      // Resolve controls against the current source nodes, including after a
+      // native re-render with identical text. Cloned nodes have no listeners.
+      const proxies=[...summary.querySelectorAll('input[type=checkbox],.mte-cell-fold-hit,.mte-arrow-hit')];
+      proxies.forEach((proxy,i)=>{
+        const original=originals[i];if(!original)return;
+        if(proxy.matches('input')){
+          proxy.checked=original.checked;
+          proxy.onpointerdown=e=>e.stopPropagation();
+          proxy.onmousedown=e=>{e.preventDefault();e.stopPropagation();};
+          proxy.onclick=e=>{e.stopPropagation();original.click();};
+        }else{
+          const action=this.plugin.cellOutline.foldActions.get(original);
+          if(action)this.plugin.cellOutline.foldActions.set(proxy,()=>{action();this.plugin.schedule();});
+        }
+      });
       const label=summary.querySelector('.mte-summary-text');
       if(label)measurements.push({summary,label,more});
     }

@@ -292,3 +292,10 @@ table.mte-compact:not(.mte-width-table) { table-layout:fixed !important; width:1
 .mte-compact :is(td,th) .cm-content { padding-inline:0 !important; }
 
 .mte-compact :is(td,th) > .table-cell-wrapper:has(.cm-editor) { padding:0 !important; }
+
+/* Rich first-line projection: keep marker geometry, prevent wrapping, and
+   reserve room for the arrow that normally sits outside the outline line. */
+.mte-summary-text:has(.mte-outline-arrow) { padding-inline-start:12px; }
+.mte-summary-text > .mte-outline-preview-line { white-space:nowrap !important; }
+.mte-summary-text .mte-outline-preview-line.mte-cell-fold-closed::after { content:none; }
+.mte-summary-text .mte-task-body { white-space:nowrap; }
