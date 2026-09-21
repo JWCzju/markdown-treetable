@@ -27,7 +27,13 @@ class ColumnWidths {
     plugin.registerMarkdownPostProcessor((el,ctx)=>this.reading(el,ctx));
   }
   observe(){this.observer.observe(document.body,{childList:true,subtree:true});}
-  sizeGrips(record){const h=record.table.offsetHeight;for(const grip of record.table.querySelectorAll('.mte-width-grip'))if(grip.style.height!==`${h}px`)grip.style.height=`${h}px`;}
+  sizeGrips(record){
+    // The table box includes its toolbar caption; grips start below it in th.
+    // Read all geometry before writing, and stop at the actual table bottom.
+    const bottom=record.table.getBoundingClientRect().bottom;
+    const sizes=[...record.table.querySelectorAll('.mte-width-grip')].map(grip=>[grip,Math.max(0,bottom-grip.getBoundingClientRect().top)]);
+    for(const [grip,h] of sizes)if(grip.style.height!==`${h}px`)grip.style.height=`${h}px`;
+  }
   apply(table,descriptor,commit){
     let record=this.records.get(table);
     if(record?.dragging)return;
