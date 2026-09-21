@@ -1,4 +1,5 @@
-const { WIDTH,clamp,tables,setWidths }=require('./widths.cjs');
+const { WIDTH,clamp,tables,setWidths,cells }=require('./widths.cjs');
+const widthMarkdown = new (require('markdown-it'))({html:true});
 class ColumnWidths {
   constructor(plugin){
     this.plugin=plugin;this.records=new Map();this.autoWidths=new Map();
@@ -58,13 +59,22 @@ class ColumnWidths {
     host.style.cssText='position:fixed;left:-100000px;top:0;visibility:hidden;pointer-events:none;contain:layout style;';
     host.style.font=getComputedStyle(table).font;
     const probes=[];
-    for(const row of table.rows)for(const cell of row.cells){
-      const body=cell.querySelector(':scope > .table-cell-wrapper,:scope > .mte-compact-body');
-      const probe=document.createElement('div');
-      for(const n of (body||cell).childNodes)probe.append(n.cloneNode(true));
-      probe.querySelectorAll('button,.mte-width-grip,.mte-compact-summary,.table-col-drag-handle,.table-row-drag-handle').forEach(n=>n.remove());
-      probe.style.cssText='width:max-content;max-width:none;white-space:nowrap;';
-      host.append(probe);probes.push({probe,index:cell.cellIndex});
+    const lines=descriptor.source.split('\n');
+    for(let row=0;row<lines.length;row++){
+      if(row===1)continue;
+      for(const [index,cell] of cells(lines[row]).entries()){
+        if(index>=descriptor.cells.length)continue;
+        const probe=document.createElement('div');
+        // Native cells retain a hidden, stale preview while their editor owns
+        // the new text. Source is authoritative for both cache and measurement.
+        const rendered=widthMarkdown.renderInline(cell.text.replace(WIDTH,''));
+        const parsed=new DOMParser().parseFromString(rendered,'text/html');
+        parsed.querySelectorAll('script,style,iframe,object,embed,link').forEach(n=>n.remove());
+        for(const n of parsed.body.childNodes)probe.append(n.cloneNode(true));
+        probe.querySelectorAll('img').forEach(n=>n.replaceWith('[图片]'));
+        probe.style.cssText='width:max-content;max-width:none;white-space:nowrap;';
+        host.append(probe);probes.push({probe,index});
+      }
     }
     table.ownerDocument.body.append(host);
     const widths=descriptor.cells.map(()=>60);
