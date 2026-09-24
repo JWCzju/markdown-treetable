@@ -33,6 +33,9 @@ class MyTableExtended extends Plugin {
       const changes = [];
       update.changes.iterChanges((from, to, _a, _b, insert) => changes.push({from, to, insert: insert.toString()}));
       this.foldMemory.update(view.file.path, update.startState.doc.toString(), update.state.doc.toString(), changes, update.transactions.some(t => t.isUserEvent('set')));
+      // Cell input may only mutate a text node; update widths with the source
+      // transaction rather than waiting for the debounced DOM scanner.
+      this.columnWidths?.scan(view);
     }));
     this.registerEvent(this.app.vault.on('rename', (file, oldPath) => {
       this.foldMemory.rename(oldPath, file.path); this.reading?.clear(); this.schedule();
