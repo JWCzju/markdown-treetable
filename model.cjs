@@ -43,9 +43,11 @@ function parse(source, path = '', options = {}) {
     while (previous >= 0 && (require('./row-height.cjs').HEIGHT.test(lines[previous]) || !lines[previous].trim())) previous--;
     const marker = lines[previous]?.match(/^\s*<!--\s*tree-table(?:\s+column=(?:"([^"]+)"|([0-9]+)))?(?:\s+id="([a-zA-Z0-9_-]+)")?\s*-->\s*$/);
     const height = require('./row-height.cjs').heightMetadata(lines, start);
-    const firstData = lines[start + 2] || '';
-    const firstCell = firstData.split('|')[1]?.trim() || '';
-    const auto = !marker && options.autoDetect && /^(?:#{1,3}\s+|>+\s+)/.test(firstCell);
+    // A tree table may begin with a plain root row. Inspect every data row so
+    // a later group or `>` child still opts the table into tree rendering.
+    const auto = !marker && options.autoDetect && lines
+      .slice(start + 2, token.map[1])
+      .some(line => /^\s*\|\s*(?:#{1,3}\s+|>+\s+)/.test(line));
     const tree = !!(marker || auto);
     if (!tree && !options.includePlain) continue;
     const headers = [], rows = [];

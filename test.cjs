@@ -59,6 +59,14 @@ test('automatic state survives text outside table and explicit change overrides 
   assert.equal(parse('# Heading\n\n' + fixture, 'test.md')[0].rows[1].key, row.key);
   assert.equal(folded({ ...row, explicit: '+' }, { [row.key]: { explicit: '-', closed: true } }), false);
 });
+
+test('auto-detects a tree when the first root row is plain and a later row is indented', () => {
+  const source = '| Q | A |\n| --- | --- |\n| Root | |\n| > Child | |';
+  const table = parse(source, 'later-child.md', { autoDetect: true })[0];
+  assert.equal(table.tree, true);
+  assert.equal(table.valid, true);
+  assert.deepEqual(table.rows.map(row => row.depth), [0, 1]);
+});
 test('automatic state survives edits to root objects and group contents', () => {
   const source = '<!-- tree-table -->\n| Q | A |\n| --- | --- |\n| # Strategy | |\n| Root | before |\n| #- Archive | |\n| Old | |';
   const before = parse(source, 'test.md')[0];
