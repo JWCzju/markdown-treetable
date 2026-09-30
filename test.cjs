@@ -32,6 +32,15 @@ test('groups contain root objects, stop at next group and retain nested folds', 
   assert.equal(group.markerOffset, 1);
   assert.equal(parse(source.replace('- Root', '> Root'))[0].valid, false);
 });
+test('top-level groups remain foldable when followed by nested groups', () => {
+  const source = '<!-- tree-table -->\n| Q | A |\n| --- | --- |\n' + ['# 一级', '## 二级', '记录', '# 另一个一级', '记录'].map(s => `| ${s} | |`).join('\n');
+  const table = parse(source)[0];
+  assert.equal(table.rows[0].hasChildren, true);
+  assert.equal(table.rows[1].hasChildren, true);
+  assert.deepEqual(visibility(table.rows, {}), [false, false, false, false, false]);
+  assert.deepEqual(visibility(table.rows, { [table.rows[0].key]: { explicit: '', closed: true } }), [false, true, true, false, false]);
+  assert.deepEqual(visibility(table.rows, { [table.rows[1].key]: { explicit: '', closed: true } }), [false, false, true, false, false]);
+});
 const fixture = '<!-- tree-table column="Q" id="test" -->\n\n| Q | A |\n| --- | --- |\n| Root | text |\n| >- Child | [[Note\\|Alias]] |\n| >> Leaf | a\\|b |\n| Other | text |';
 
 test('column accepts zero-based numeric syntax with or without quotes, id is optional', () => {

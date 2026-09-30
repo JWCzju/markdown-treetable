@@ -79,7 +79,11 @@ function parse(source, path = '', options = {}) {
       stack[row.depth] = row.label;
       row.identity = JSON.stringify(row.group ? { group } : group !== null ? { group, path: stack } : stack);
       const next = n + 1 < rows.length ? hierarchy(rows[n + 1].cells[col] || '') : null;
-      row.hasChildren = !!next && !next.group && (row.group || next.depth > row.depth);
+      // Groups form the same hierarchy as records: a heading owns a deeper
+      // heading, while a same-level heading starts a sibling branch.
+      row.hasChildren = !!next && (row.group
+        ? (next.group ? next.depth > row.depth : true)
+        : (!next.group && next.depth > row.depth));
       row.markerOffset = row.group ? 1 : row.depth;
       row.ch = cellStarts(lines[row.line])[col];
       // Refuse source export if the raw prefix cannot be mapped exactly.
@@ -110,17 +114,22 @@ function folded(row, states) {
 
 function visibility(rows, states) {
   let hiddenAt = null;
-  let groupClosed = false;
+  let hiddenGroupDepth = null;
   return rows.map(row => {
     if (row.group) {
+      if (hiddenGroupDepth !== null) {
+        if (row.depth > hiddenGroupDepth) return true;
+        hiddenGroupDepth = null;
+      }
       hiddenAt = null;
-      groupClosed = row.hasChildren && folded(row, states);
+      if (row.hasChildren && folded(row, states)) hiddenGroupDepth = row.depth;
       return false;
     }
+    if (hiddenGroupDepth !== null) return true;
     if (hiddenAt !== null && row.depth <= hiddenAt) hiddenAt = null;
     const hidden = hiddenAt !== null;
     if (!hidden && row.hasChildren && folded(row, states)) hiddenAt = row.depth;
-    return groupClosed || hidden;
+    return hidden;
   });
 }
 
