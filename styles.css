@@ -1,5 +1,36 @@
 .mte-table .mte-hidden { display: none !important; }
 
+body table.mte-table > tbody > tr:not(.mte-group) > td.mte-cell {
+  padding-right: 31px !important;
+}
+body table.mte-table .mte-row-detail-button {
+  position: absolute;
+  right: 4px;
+  top: 4px;
+  width: 22px;
+  height: 22px;
+  padding: 3px;
+  border: 0;
+  border-radius: 4px;
+  background: var(--background-primary);
+  color: var(--text-muted);
+  opacity: 0;
+  z-index: 3;
+}
+body table.mte-table .mte-row-detail-button svg { width: 16px; height: 16px; }
+body table.mte-table tr:hover .mte-row-detail-button,
+body table.mte-table .mte-row-detail-button:focus-visible { opacity: 1; }
+body table.mte-table .mte-row-detail-button:hover { color: var(--text-normal); background: var(--background-modifier-hover); }
+
+.mte-row-detail { min-height: 100%; color: var(--text-normal); }
+.mte-row-detail-header { padding: 30px 38px 18px; border-bottom: 1px solid var(--background-modifier-border); }
+.mte-row-detail-header h2 { margin: 0; padding-right: 50px; font-size: 22px; font-weight: 650; }
+.mte-row-detail-error { margin-top: 12px; color: var(--text-error); font-size: var(--font-smaller); }
+.mte-row-detail-body { padding: 22px 38px 60px; }
+.mte-row-detail-caption { padding: 2px 8px 10px; font-size: var(--font-ui-small); font-weight: 600; color: var(--text-normal); }
+.mte-row-detail-fields { width: 100%; }
+.mte-row-detail-value > input[type="checkbox"] { margin: 7px 8px; }
+
 body .markdown-source-view.mod-cm6 table.table-editor.mte-table > tbody > tr > td.mte-cell,
 body .markdown-preview-view table.mte-table > tbody > tr > td.mte-cell,
 body table.table-editor.mte-table > tbody > tr > td.mte-cell {

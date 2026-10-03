@@ -6,6 +6,7 @@ const { EditorView } = require('@codemirror/view');
 const { CompactTable } = require('./compact-table.cjs');
 const { CellOutline } = require('./cell-outline.cjs');
 const { TableLookup } = require('./lookup.cjs');
+const { RowDetail } = require('./row-detail.cjs');
 
 function renderedTableCandidate(candidates, element, info) {
   const rows = element.querySelectorAll('tbody > tr');
@@ -49,6 +50,7 @@ class MyTableExtended extends Plugin {
     this.adapters = new Map();
     this.cellOutline = new CellOutline(this);
     this.tableLookup = new TableLookup(this);
+    this.rowDetail = new RowDetail(this);
     this.columnWidths = new ColumnWidths(this);
     this.compactTable = new CompactTable(this);
     this.textSelectionGuards = new Map();
@@ -313,6 +315,7 @@ class MyTableExtended extends Plugin {
       cell.appendChild(button);
     });
     this.hidePrefixes(element, table);
+    this.rowDetail.attach(element, table);
     // Let the browser own text drag selection inside tree-table cells. Obsidian's
     // table editor otherwise treats a drag as a multi-cell selection.
     this.guardTextSelection(element);
@@ -356,6 +359,7 @@ class MyTableExtended extends Plugin {
     for (const wrapper of element.querySelectorAll('.mte-reading-group-content')) wrapper.replaceWith(...wrapper.childNodes);
     for (const prefix of element.querySelectorAll('.mte-group-prefix')) prefix.replaceWith(document.createTextNode(prefix.textContent));
     for (const button of element.querySelectorAll('.mte-toggle')) button.remove();
+    for (const button of element.querySelectorAll('.mte-row-detail-button')) button.remove();
     for (const prefix of element.querySelectorAll('.mte-prefix')) prefix.replaceWith(document.createTextNode(prefix.textContent));
     for (const cell of element.querySelectorAll('.mte-cell')) {
       cell.classList.remove('mte-cell'); cell.style.removeProperty('--mte-indent');

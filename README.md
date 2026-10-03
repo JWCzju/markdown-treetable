@@ -23,6 +23,18 @@ Add a comment immediately before a Markdown table:
 
 The plugin does not rewrite Markdown when folding. It enhances only activated tables and leaves ordinary tables alone.
 
+## Editable row detail demo
+
+With the current Joule drawer plugin enabled, hover a record's hierarchy cell and click the detail icon at its right edge. The drawer presents the row as vertical key/value properties. Click a value, or focus it and press Enter/Space, to edit with the shared Markdown editor; blur or Cmd/Ctrl+Enter saves it back to the original cell. A cell containing only `- [ ]` or `- [x]` is a direct checkbox. Attribute groups are optional header metadata:
+
+```md
+| Trip | Transport <!-- detail-group="Travel" --> | Hotel <!-- detail-group="Travel" --> | Notes |
+| --- | --- | --- | --- |
+| Tokyo | - [x] | - [ ] | Check entry requirements |
+```
+
+The Markdown table remains the only record. If its source row changes while the drawer is open, further edits are refused until the detail is reopened. The detail uses the shared property surface package for its editor, preview adapter, group control, and styling. Its Markdown preview is rendered through Obsidian's `MarkdownRenderer`; the experimental native cell-outline editor is not used in this transposed view.
+
 ## State and compatibility
 
 - Clicks are remembered locally even on explicitly marked rows. Changing that row's `+`/`-` marker resets the remembered override.
