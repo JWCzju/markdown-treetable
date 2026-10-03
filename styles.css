@@ -40,6 +40,36 @@ body table.table-editor.mte-table > tbody > tr > td.mte-cell {
 
 .mte-table .mte-prefix { display: none; }
 .mte-table .mte-group-prefix { display: none; }
+/* Horizontal property groups are a visible projection of # Group<br>Field headers. */
+body table.mte-table > thead > tr.mte-column-groups > th.mte-column-group-cell {
+  padding: 4px 8px 3px;
+  border-top: 0;
+  border-bottom: 0;
+  border-inline: 0;
+  background: var(--background-secondary);
+  text-align: left;
+  vertical-align: bottom;
+}
+body table.mte-table > thead > tr.mte-column-groups > th.mte-column-group-cell + th.mte-column-group-cell {
+  border-inline-start-color: transparent;
+}
+body table.mte-table .mte-column-group-input {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-muted);
+  font-size: var(--font-smallest);
+  font-weight: 600;
+  text-align: left;
+}
+body table.mte-table .mte-column-group-input:focus {
+  color: var(--text-normal);
+  box-shadow: 0 1px 0 var(--interactive-accent);
+}
 body table.mte-table > tbody > tr.mte-group > td {
   background: color-mix(in srgb, var(--mte-header-color, var(--background-secondary)) 50%, var(--background-primary));
   border-top: 1px solid var(--background-modifier-border);

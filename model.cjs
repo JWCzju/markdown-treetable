@@ -24,6 +24,16 @@ function cellStarts(line) {
   return starts.map(i => i + (line.slice(i).match(/^\s*/)?.[0].length || 0));
 }
 
+function headerGroups(rawLine) {
+  const { cells } = require('./widths.cjs');
+  return cells(rawLine).map((cell, index) => {
+    const source = cell.text;
+    const withoutComments = source.replace(/<!--[\s\S]*?-->/g, '').trim();
+    const match = withoutComments.match(/^#\s+(.+?)\s*<br\s*\/?>\s*(.*)$/i);
+    return match ? { index, label: match[1].trim(), field: match[2].trim(), source, from: cell.from, to: cell.to } : null;
+  });
+}
+
 function parse(source, path = '', options = {}) {
   const lines = source.split('\n');
   // markdown-it otherwise accepts a following standalone block ID as the last
@@ -43,12 +53,13 @@ function parse(source, path = '', options = {}) {
     while (previous >= 0 && (require('./row-height.cjs').HEIGHT.test(lines[previous]) || !lines[previous].trim())) previous--;
     const marker = lines[previous]?.match(/^\s*<!--\s*tree-table(?:\s+column=(?:"([^"]+)"|([0-9]+)))?(?:\s+id="([a-zA-Z0-9_-]+)")?\s*-->\s*$/);
     const height = require('./row-height.cjs').heightMetadata(lines, start);
+    const groupedHeaders = headerGroups(lines[start]);
     // A tree table may begin with a plain root row. Inspect every data row so
     // a later group or `>` child still opts the table into tree rendering.
     const auto = !marker && options.autoDetect && lines
       .slice(start + 2, token.map[1])
       .some(line => /^\s*\|\s*(?:#{1,3}\s+|>+\s+)/.test(line));
-    const tree = !!(marker || auto);
+    const tree = !!(marker || auto || groupedHeaders.some(Boolean));
     if (!tree && !options.includePlain) continue;
     const headers = [], rows = [];
     let current = null, inHead = false;
@@ -61,7 +72,8 @@ function parse(source, path = '', options = {}) {
     }
     if (!tree) {
       tables.push({start, end:token.map[1], headers, rows, valid:true, tree:false,
-        identity:`plain-${start}`, path, rowHeight:height.value, singleLine:height.value === 1});
+        identity:`plain-${start}`, path, rowHeight:height.value, singleLine:height.value === 1,
+        headerGroups: groupedHeaders, headerLine: start, headerRaw: lines[start]});
       continue;
     }
     const columnSpec = marker ? (marker[1] ?? marker[2]) : 0;
@@ -93,7 +105,8 @@ function parse(source, path = '', options = {}) {
     // available when tables are frequently reordered within the same note.
     const identity = marker?.[3] || `table-${treeOrdinal}`;
     treeOrdinal++;
-    const table = { tree:true, start, end: token.map[1], col, headers, rows, valid: auto ? true : valid, identity, path, rowHeight:height.value, singleLine: height.value === 1 };
+    const table = { tree:true, start, end: token.map[1], col, headers, rows, valid: auto ? true : valid, identity, path, rowHeight:height.value, singleLine: height.value === 1,
+      headerGroups: groupedHeaders, headerLine: start, headerRaw: lines[start] };
     const occurrences = new Map();
     for (const row of rows) {
       row.occurrence = occurrences.get(row.identity) || 0;
@@ -133,4 +146,4 @@ function visibility(rows, states) {
   });
 }
 
-module.exports = { parse, hierarchy, folded, visibility };
+module.exports = { parse, hierarchy, folded, visibility, headerGroups };

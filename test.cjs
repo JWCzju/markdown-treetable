@@ -17,6 +17,46 @@ test('standalone block IDs after a tree table do not become table rows', () => {
 });
 const assert = require('node:assert/strict');
 const { parse, folded, visibility } = require('./model.cjs');
+const { headerGroupChange } = require('./header-groups.cjs');
+
+test('visible header groups preserve the physical header and widths', () => {
+  const source = '| # Travel<br>Hotel <!-- width=173 --> | Room | # Gear<br>Phone | Charger |\n| --- | --- | --- | --- |\n| Root | - [ ] | | |';
+  const table = parse(source, 'groups.md', { autoDetect: true })[0];
+  assert.equal(table.tree, true);
+  assert.equal(table.headerGroups[0].label, 'Travel');
+  assert.equal(table.headerGroups[2].label, 'Gear');
+  assert.equal(table.headerGroups[1], null);
+  assert.equal(table.rows.length, 1);
+  const edit = headerGroupChange(source, table, 0, 'Stay');
+  const next = source.slice(0, edit.from) + edit.insert + source.slice(edit.to);
+  assert.match(next, /# Stay<br>Hotel <!-- width=173 -->/);
+  const clear = headerGroupChange(next, parse(next, 'groups.md', { autoDetect: true })[0], 0, '');
+  const cleared = next.slice(0, clear.from) + clear.insert + next.slice(clear.to);
+  assert.match(cleared, /\| Hotel <!-- width=173 --> \|/);
+});
+test('header group edits support multiple columns and preserve cell markup', () => {
+  const source = '| # Stay<br>Hotel **name** <!-- width=173 --> | Room | # Gear<br>Phone <!-- width=240 --> |\n| --- | --- | --- |\n| Tokyo | A | B |';
+  const table = parse(source, 'groups.md', { autoDetect: true })[0];
+  assert.deepEqual(table.headerGroups.map(group => group?.label || null), ['Stay', null, 'Gear']);
+  const edit = headerGroupChange(source, table, 2, 'Devices');
+  const next = source.slice(0, edit.from) + edit.insert + source.slice(edit.to);
+  assert.match(next, /# Devices<br>Phone <!-- width=240 -->/);
+  assert.match(next, /# Stay<br>Hotel \*\*name\*\* <!-- width=173 -->/);
+});
+test('clearing the only header group returns a plain field without changing width metadata', () => {
+  const source = '| # A<br>Name <!-- width=301 --> | Other |\n| --- | --- |\n| Root | Value |';
+  const table = parse(source, 'groups.md', { autoDetect: true })[0];
+  const edit = headerGroupChange(source, table, 0, '');
+  const next = source.slice(0, edit.from) + edit.insert + source.slice(edit.to);
+  assert.equal(next.split('\n')[0], '| Name <!-- width=301 --> | Other |');
+  assert.equal(parse(next, 'groups.md', { autoDetect: true, includePlain: true })[0].headerGroups.some(Boolean), false);
+});
+test('plain tables and fenced examples are not treated as header groups', () => {
+  const plain = parse('| Name | Value |\n| --- | --- |\n| A | B |', 'plain.md', { autoDetect: true, includePlain: true })[0];
+  assert.equal(plain.tree, false);
+  const fenced = parse('```md\n| # Fake<br>Field |\n| --- |\n```', 'fenced.md', { autoDetect: true, includePlain: true });
+  assert.equal(fenced.length, 0);
+});
 test('groups contain root objects, stop at next group and retain nested folds', () => {
   const source = '<!-- tree-table -->\n| Q | A |\n| --- | --- |\n' + ['Before', '# Strategy', '- Root', '> Child', 'Other', '#- Archive', 'Root', '> Child', '# Empty'].map(s => `| ${s} | |`).join('\n');
   const table = parse(source)[0];

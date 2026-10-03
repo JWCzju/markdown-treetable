@@ -37,7 +37,8 @@ class ColumnWidths {
   apply(table,descriptor,commit){
     let record=this.records.get(table);
     if(record?.dragging)return;
-    const headers=[...table.querySelectorAll('thead tr:first-child > th')];
+    const headerRow=table.querySelector('thead > tr:not(.mte-column-groups)');
+    const headers=[...(headerRow?.querySelectorAll(':scope > th') || [])];
     if(headers.length!==descriptor.cells.length)return;
     const auto=this.measure(table,descriptor);
     const widths=descriptor.cells.map((c,i)=>{const m=c.text.match(WIDTH);return m?clamp(+m[1]):auto[i];});

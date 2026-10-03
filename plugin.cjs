@@ -7,6 +7,7 @@ const { CompactTable } = require('./compact-table.cjs');
 const { CellOutline } = require('./cell-outline.cjs');
 const { TableLookup } = require('./lookup.cjs');
 const { RowDetail } = require('./row-detail.cjs');
+const { headerGroupChange } = require('./header-groups.cjs');
 
 function renderedTableCandidate(candidates, element, info) {
   const rows = element.querySelectorAll('tbody > tr');
@@ -277,6 +278,7 @@ class MyTableExtended extends Plugin {
     }
     const header = element.querySelector('thead th');
     if (header) element.style.setProperty('--mte-header-color', getComputedStyle(header).backgroundColor);
+    this.decorateHeaderGroups(element, table);
     const hidden = visibility(table.rows, this.states);
     // Do not hide a live native cell editor while it owns keyboard focus.
     if (rows.some((row, index) => hidden[index] && row.contains(document.activeElement))) return;
@@ -328,6 +330,66 @@ class MyTableExtended extends Plugin {
     // in-cell text drag, never row/column handles or a drag across cells.
   }
 
+  decorateHeaderGroups(element, table) {
+    const groups = table.headerGroups || [];
+    if (!groups.some(Boolean)) return;
+    const head = element.querySelector(':scope > thead');
+    const header = [...(head?.querySelectorAll(':scope > tr:not(.mte-column-groups)') || [])][0];
+    if (!head || !header) return;
+    const old = head.querySelector(':scope > tr.mte-column-groups');
+    if (old) old.remove();
+    const row = document.createElement('tr'); row.className = 'mte-column-groups';
+    [...header.children].forEach((_, index) => {
+      const cell = document.createElement('th'); cell.className = 'mte-column-group-cell';
+      const input = document.createElement('input'); input.type = 'text'; input.className = 'mte-column-group-input';
+      input.placeholder = '分组'; input.value = groups[index]?.label || '';
+      input.setAttribute('aria-label', `第 ${index + 1} 列分组`);
+      input.addEventListener('pointerdown', e => e.stopPropagation());
+      input.addEventListener('mousedown', e => e.stopPropagation());
+      input.addEventListener('change', () => this.writeHeaderGroup(element, table, index, input.value));
+      cell.append(input); row.append(cell);
+    });
+    head.insertBefore(row, header);
+    for (const [index, cell] of [...header.children].entries()) {
+      const meta = groups[index];
+      if (!meta || cell.querySelector('.cm-editor') || cell.isContentEditable) continue;
+      if (cell.dataset.mteHeaderGroupHidden === 'true') continue;
+      cell.dataset.mteHeaderGroupOriginal = cell.innerHTML;
+      const content = cell.querySelector(':scope > .table-cell-wrapper') || cell;
+      const br = [...content.querySelectorAll('br')][0];
+      if (!br) continue;
+      const before = [];
+      let node = content.firstChild;
+      while (node && node !== br) { before.push(node); node = node.nextSibling; }
+      for (const n of before) n.remove();
+      br.remove();
+      cell.dataset.mteHeaderGroupHidden = 'true';
+    }
+  }
+
+  async writeHeaderGroup(element, table, index, label) {
+    const view = this.app.workspace.getLeavesOfType('markdown').map(l => l.view)
+      .find(v => v.file?.path === table.path && v.containerEl.contains(element) && v.editor?.cm);
+    if (view) {
+      const cm = view.editor.cm;
+      let start; try { start = cm.state.doc.lineAt(cm.posAtDOM(element)).number - 1; } catch { return; }
+      const source = cm.state.doc.toString();
+      const model = parse(source, table.path, { autoDetect: this.autoDetectTree, includePlain: true }).find(t => t.start === start);
+      const change = model && headerGroupChange(source, model, index, label);
+      if (change) cm.dispatch({ changes: change, userEvent: 'input' });
+      return;
+    }
+    const file = this.app.vault.getAbstractFileByPath(table.path);
+    if (!file) return;
+    await this.app.vault.process(file, source => {
+      const model = parse(source, table.path, { autoDetect: this.autoDetectTree, includePlain: true }).find(t => t.start === table.start);
+      const change = model && headerGroupChange(source, model, index, label);
+      if (!change) return source;
+      return source.slice(0, change.from) + change.insert + source.slice(change.to);
+    });
+    this.schedule();
+  }
+
   hidePrefixes(element, table) {
     const rows = [...element.querySelectorAll('tbody > tr')];
     table.rows.forEach((row, index) => {
@@ -353,6 +415,11 @@ class MyTableExtended extends Plugin {
     element.classList.remove('mte-table');
     element.classList.remove('mte-grouped');
     element.style.removeProperty('--mte-header-color');
+    for (const row of element.querySelectorAll(':scope > thead > tr.mte-column-groups')) row.remove();
+    for (const cell of element.querySelectorAll(':scope > thead > tr:not(.mte-column-groups) > th[data-mte-header-group-hidden="true"]')) {
+      if (cell.dataset.mteHeaderGroupOriginal != null) cell.innerHTML = cell.dataset.mteHeaderGroupOriginal;
+      delete cell.dataset.mteHeaderGroupOriginal; delete cell.dataset.mteHeaderGroupHidden;
+    }
     for (const row of element.querySelectorAll('.mte-hidden')) row.classList.remove('mte-hidden');
     for (const row of element.querySelectorAll('.mte-group')) row.classList.remove('mte-group');
     for (const wrapper of element.querySelectorAll('.mte-group-content')) wrapper.classList.remove('mte-group-content');

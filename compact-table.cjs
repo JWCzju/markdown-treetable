@@ -45,7 +45,7 @@ class CompactTable {
     if(r.menuButton)r.menuButton.setAttribute('aria-label','选择行高');
     if(!model.rowHeight){table.querySelectorAll('.mte-compact-summary').forEach(e=>e.remove());return;}
     const measurements=[];
-    for(const cell of table.querySelectorAll(':scope > tbody > tr > td, :scope > thead > tr > th')){
+    for(const cell of table.querySelectorAll(':scope > tbody > tr > td, :scope > thead > tr:not(.mte-column-groups) > th')){
       const wrapper=cell.querySelector(':scope > .table-cell-wrapper');
       // Reading-mode cells have no native wrapper. Preserve original nodes.
       let body=wrapper || cell.querySelector(':scope > .mte-compact-body');
