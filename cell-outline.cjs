@@ -277,7 +277,7 @@ class CellOutline {
         // Preserve native inline nodes (including image embeds and their handlers).
         // Block widgets such as details and embedded notes remain owned by Obsidian.
         if ([...wrapper.childNodes].some(n => n.nodeType !== 3 &&
-          !(n.nodeType === 1 && (n.matches('br, a, strong, em, b, i, del, s, code, mark, img') ||
+          !(n.nodeType === 1 && (n.matches('br, a, strong, em, b, i, del, s, code, mark, img, font') ||
             (n.matches('span') && (!n.classList.contains('internal-embed') || n.classList.contains('image-embed'))))))) continue;
         const parts = [[]];
         for (const child of wrapper.childNodes) {
