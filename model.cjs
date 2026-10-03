@@ -61,7 +61,7 @@ function parse(source, path = '', options = {}) {
     }
     if (!tree) {
       tables.push({start, end:token.map[1], headers, rows, valid:true, tree:false,
-        identity:`plain-${start}`, path, singleLine:height.lines.length > 0});
+        identity:`plain-${start}`, path, rowHeight:height.value, singleLine:height.value === 1});
       continue;
     }
     const columnSpec = marker ? (marker[1] ?? marker[2]) : 0;
@@ -93,7 +93,7 @@ function parse(source, path = '', options = {}) {
     // available when tables are frequently reordered within the same note.
     const identity = marker?.[3] || `table-${treeOrdinal}`;
     treeOrdinal++;
-    const table = { tree:true, start, end: token.map[1], col, headers, rows, valid: auto ? true : valid, identity, path, singleLine: height.lines.length > 0 };
+    const table = { tree:true, start, end: token.map[1], col, headers, rows, valid: auto ? true : valid, identity, path, rowHeight:height.value, singleLine: height.value === 1 };
     const occurrences = new Map();
     for (const row of rows) {
       row.occurrence = occurrences.get(row.identity) || 0;

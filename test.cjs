@@ -140,6 +140,24 @@ test('repeated height toggles preserve preexisting blank separators exactly',()=
   }
 });
 
+test('row height levels update only metadata and work for plain and tree tables',()=>{
+  const {heightChange}=require('./row-height.cjs');
+  const table='| Name | Notes |\n| --- | --- |\n| A | first<br>second |';
+  const source='# Heading\n\n'+table+'\n\n```\n<!-- treeTable height: 6 -->\n```';
+  const apply=(s,edits)=>edits.sort((a,b)=>b.from-a.from).reduce((s,e)=>s.slice(0,e.from)+e.insert+s.slice(e.to??e.from),s);
+  let current=source;
+  for(const level of [1,2,4,6,0]){
+    const start=parse(current,'a.md',{includePlain:true})[0].start;
+    current=apply(current,heightChange(current,start,level));
+    const model=parse(current,'a.md',{includePlain:true})[0];
+    assert.equal(model.rowHeight,level);
+    assert.equal(model.singleLine,level===1);
+    assert.ok(current.includes(table));
+    assert.ok(current.includes('```\n<!-- treeTable height: 6 -->\n```'));
+  }
+  assert.equal(current,source);
+});
+
 test('plain tables opt into presentation without acquiring tree semantics or changing tree keys',()=>{
   const plain='| Name | Notes |\n| --- | --- |\n| normal | one<br>two |\n| > literal | text |';
   const tree='<!-- tree-table -->\n\n| Q | A |\n| --- | --- |\n| Root | |\n| > Child | |';

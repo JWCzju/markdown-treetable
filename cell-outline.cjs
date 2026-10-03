@@ -347,9 +347,15 @@ class CellOutline {
         this.previews.add({ wrapper, original, stamp });
       }
     }
+    this.attach(view, nodes);
+  }
+  attach(view, cachedNodes) {
+    if (!this.enabled(view) || !view.file) return;
     const cell = (view.currentMode || view.editMode)?.tableCell;
     const cm = cell?.editor?.cm;
     if (!cm || this.editors.has(cm)) return;
+    const path = view.file.path;
+    const nodes = cachedNodes || this.plugin.foldMemory.sync(path, view.editor.getValue());
     const compartment = new Compartment();
     const service = foldService.of((state, from) => {
       const line = state.doc.lineAt(from); const end = endOfSubtree(state.doc, line.number);
@@ -360,7 +366,7 @@ class CellOutline {
       const wrapper = cm.dom.closest('.table-cell-wrapper');
       const address = wrapper && sourceCell(view, wrapper);
       if (!address) return;
-      const currentSource = view.editor.getValue(), currentPath = view.file.path;
+      const currentSource = view.editor.getValue(), currentPath = path;
       const candidates = this.plugin.foldMemory.sync(currentPath, currentSource).filter(n => n.kind === 'cell' && n.row === address.row && n.col === address.col);
       const folded = new Set();
       for (let r = foldedRanges(cm.state).iter(); r.value; r.next()) folded.add(cm.state.doc.lineAt(r.from).number - 1);

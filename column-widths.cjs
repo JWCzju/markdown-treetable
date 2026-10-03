@@ -55,7 +55,8 @@ class ColumnWidths {
   }
   measure(table,descriptor){
     const max=this.plugin.autoColumnMaxWidth;
-    const key=max+':'+descriptor.source.replace(/<!--\s*width\s*=\s*\d+\s*-->/g,'');
+    const lookupSamples=this.plugin.tableLookup?.widthSamples.get(table)||[];
+    const key=JSON.stringify(lookupSamples)+':'+max+':'+descriptor.source.replace(/<!--\s*width\s*=\s*\d+\s*-->/g,'');
     const cached=this.autoWidths.get(key);if(cached)return cached;
     const tree=require('./model.cjs').parse(descriptor.source,'',{autoDetect:this.plugin.autoDetectTree})[0];
     const inset=tree ? 44+(tree.rows.some(r=>r.group)?24:0)+Math.max(0,...tree.rows.map(r=>r.depth||0))*22 : 0;
@@ -81,6 +82,12 @@ class ColumnWidths {
         probe.style.cssText='width:max-content;max-width:none;white-space:nowrap;';
         host.append(probe);probes.push({probe,index});
       }
+    }
+    // Empty-source lookup cells still contribute their generated content width.
+    for(const sample of lookupSamples) {
+      const probe=document.createElement('div');probe.textContent=sample.text;
+      probe.style.cssText='width:max-content;max-width:none;white-space:nowrap;';
+      host.append(probe);probes.push({probe,index:sample.index});
     }
     table.ownerDocument.body.append(host);
     const widths=descriptor.cells.map(()=>60);

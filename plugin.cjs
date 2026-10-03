@@ -5,6 +5,7 @@ const { FoldMemory } = require('./fold-memory.cjs');
 const { EditorView } = require('@codemirror/view');
 const { CompactTable } = require('./compact-table.cjs');
 const { CellOutline } = require('./cell-outline.cjs');
+const { TableLookup } = require('./lookup.cjs');
 
 function renderedTableCandidate(candidates, element, info) {
   const rows = element.querySelectorAll('tbody > tr');
@@ -47,13 +48,17 @@ class MyTableExtended extends Plugin {
     this.addSettingTab(new CellSettings(this.app, this));
     this.adapters = new Map();
     this.cellOutline = new CellOutline(this);
+    this.tableLookup = new TableLookup(this);
     this.columnWidths = new ColumnWidths(this);
     this.compactTable = new CompactTable(this);
     this.textSelectionGuards = new Map();
     this.reading = new Map();
     this.embeds = new WeakSet();
     this.composing = false;
-    this.observer = new MutationObserver(() => this.schedule());
+    this.observer = new MutationObserver(records => {
+      this.attachCellOutlineFromMutations(records);
+      this.schedule();
+    });
     this.imageLoads = new WeakSet();
     this.observe();
     this.register(() => this.observer.disconnect());
@@ -77,12 +82,19 @@ class MyTableExtended extends Plugin {
       this.selectionPointer = null;
       if (event.button === 0 && !event.shiftKey && !event.target.closest?.('.table-row-drag-handle, .table-col-drag-handle, .mte-toggle')) {
         const cell = event.target.closest?.('table.mte-table td, table.mte-table th');
-        if (cell) this.selectionPointer = {cell, x: event.clientX, y: event.clientY};
+        if (cell) this.selectionPointer = {
+          cell, x: event.clientX, y: event.clientY,
+          startX: event.clientX, startY: event.clientY, moved: false
+        };
       }
       this.onToggle(event);
     }, true);
     this.registerDomEvent(document, 'pointermove', event => {
-      if (this.selectionPointer) { this.selectionPointer.x = event.clientX; this.selectionPointer.y = event.clientY; }
+      if (this.selectionPointer) {
+        this.selectionPointer.x = event.clientX;
+        this.selectionPointer.y = event.clientY;
+        if (Math.hypot(event.clientX - this.selectionPointer.startX, event.clientY - this.selectionPointer.startY) > 3) this.selectionPointer.moved = true;
+      }
     }, true);
     for (const type of ['pointerup', 'pointercancel']) this.registerDomEvent(document, type, () => {
       const pointer = this.selectionPointer;
@@ -109,6 +121,18 @@ class MyTableExtended extends Plugin {
   }
 
   observe() { this.observer.observe(document.body, { childList: true, subtree: true, characterData: true }); }
+  attachCellOutlineFromMutations(records) {
+    for (const record of records) for (const added of record.addedNodes) {
+      if (added.nodeType !== Node.ELEMENT_NODE) continue;
+      const editors = added.matches?.('.cm-editor') ? [added] : added.querySelectorAll?.('.cm-editor');
+      if (!editors) continue;
+      for (const cm of editors) {
+        if (!cm.closest('table.table-editor')) continue;
+        const leaf = this.app.workspace.getLeavesOfType('markdown').find(candidate => candidate.view.containerEl.contains(cm));
+        if (leaf?.view && this.cellOutline.enabled(leaf.view)) this.cellOutline.attach(leaf.view);
+      }
+    }
+  }
   schedule() {
     if (this.queued || this.composing) return;
     this.queued = true;
@@ -210,6 +234,7 @@ class MyTableExtended extends Plugin {
   }
 
   decorate(element, table) {
+    this.tableLookup.apply(element, table);
     // Reading cells lack the native editor's inner content box. Match its
     // typography and padding without changing row/column or fold ownership.
     if(table?.valid && table.tree !== false && !element.classList.contains('table-editor')) {
@@ -268,7 +293,7 @@ class MyTableExtended extends Plugin {
         cell.dataset.mtePadding = cell.style.getPropertyValue('padding-left');
         cell.dataset.mtePaddingPriority = cell.style.getPropertyPriority('padding-left');
       }
-      cell.style.setProperty('padding-left', `calc(28px + var(--mte-inset, 0px) + ${indent}px)`, 'important');
+      cell.style.setProperty('padding-left', `calc(24px + var(--mte-inset, 0px) + ${indent}px)`, 'important');
       if (!row.hasChildren) return;
       const button = document.createElement('button');
       const closed = folded(row, this.states);
@@ -404,10 +429,16 @@ class MyTableExtended extends Plugin {
       table.selectCells = function (anchor, head, dragging) {
         const pointer = plugin.selectionPointer;
         const rect = pointer?.cell.getBoundingClientRect();
-        if (!dragging && pointer && this.tableEl.contains(pointer.cell) &&
+        if (pointer && this.tableEl.contains(pointer.cell) &&
           pointer.x >= rect.left && pointer.x < rect.right && pointer.y >= rect.top && pointer.y < rect.bottom) {
-          this.deselectCells?.();
-          return;
+          // Native table selection runs again on mouseup. It may reconstruct the
+          // DOM selection one character late, so never hand an in-cell text drag
+          // back to the table controller after the browser has selected text.
+          if (pointer.moved) return;
+          if (!dragging) {
+            this.deselectCells?.();
+            return;
+          }
         }
         return original.call(this, anchor, head, dragging);
       };

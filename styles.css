@@ -4,7 +4,7 @@ body .markdown-source-view.mod-cm6 table.table-editor.mte-table > tbody > tr > t
 body .markdown-preview-view table.mte-table > tbody > tr > td.mte-cell,
 body table.table-editor.mte-table > tbody > tr > td.mte-cell {
   position: relative;
-  padding-left: calc(28px + var(--mte-inset, 0px) + var(--mte-indent, 0px)) !important;
+  padding-left: calc(24px + var(--mte-inset, 0px) + var(--mte-indent, 0px)) !important;
 }
 
 .mte-table .mte-prefix { display: none; }
@@ -22,14 +22,14 @@ body .mte-table button.mte-toggle {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
+  width: 16px;
   height: 22px;
   padding: 0;
   border: 0;
   border-radius: 3px;
   background: transparent;
   box-shadow: none;
-  color: var(--text-normal);
+  color: color-mix(in srgb, var(--text-muted) 65%, var(--text-faint));
   font-size: 20px;
   font-weight: 700;
   line-height: 1;
@@ -37,7 +37,7 @@ body .mte-table button.mte-toggle {
 }
 
 body .mte-table button.mte-toggle:hover { background: var(--background-modifier-hover); }
-body .mte-table button.mte-toggle svg { width: 19px; height: 19px; stroke-width: 3; }
+body .mte-table button.mte-toggle svg { width: 16px; height: 16px; stroke-width: 3; }
 
 body table.mte-grouped > tbody > tr:not(.mte-group) { --mte-inset: 1.5em; }
 body table.mte-grouped > tbody > tr:not(.mte-group) > td:first-child {
@@ -274,20 +274,35 @@ button.mte-outline-arrow:hover { color:var(--text-normal); background:var(--back
 
 /* A real caption reserves its own space, never overlays the blank Markdown line. */
 .cm-table-widget:has(.mte-table-tools) { padding-top:0 !important; }
-.mte-table-tools { caption-side:top; text-align:left; height:32px; padding:0 0 8px; }
+.mte-table-tools { caption-side:top; text-align:left; height:32px; padding:0 0 8px; white-space:nowrap; }
 .mte-table-tools .mte-height-toggle { height:24px; width:28px; padding:3px; border:0; box-shadow:none; background:transparent; color:var(--text-muted); }
 .mte-table-tools .mte-height-toggle svg { width:16px; height:16px; }
 .mte-table-tools .mte-height-toggle[aria-pressed="true"] { color:var(--interactive-accent); background:var(--background-modifier-hover); }
+.mte-table-tools .mte-height-menu { height:24px; width:16px; padding:3px 0; border:0; box-shadow:none; background:transparent; color:var(--text-muted); vertical-align:top; }
+.mte-table-tools .mte-height-menu svg { width:12px; height:12px; }
+.mte-table-tools :is(.mte-height-toggle,.mte-height-menu):hover { background:var(--background-modifier-hover); }
+.mte-height-popover { position:fixed; z-index:1000; min-width:144px; padding:4px; border:1px solid var(--background-modifier-border); border-radius:6px; background:var(--background-primary); box-shadow:var(--shadow-s); }
+body .mte-height-popover button.mte-height-option { display:block; width:100%; padding:6px 10px; border:0; border-radius:4px; background:transparent; box-shadow:none; color:var(--text-normal); text-align:left; cursor:pointer; }
+body .mte-height-popover button.mte-height-option:hover { background:var(--background-modifier-hover); }
+body .mte-height-popover button.mte-height-option[aria-checked="true"] { color:var(--interactive-accent); background:var(--background-modifier-hover); }
 .mte-compact-summary { display:none; }
 .mte-compact :is(td,th):not(:has(.cm-editor)):not(.mte-compact-open) > :is(.table-cell-wrapper,.mte-compact-body) { display:none !important; }
-.mte-compact :is(td,th):not(:has(.cm-editor)):not(.mte-compact-open) > .mte-compact-summary { display:flex; white-space:nowrap; overflow:hidden; line-height:var(--line-height-normal); }
+.mte-compact :is(td,th):not(:has(.cm-editor)):not(.mte-compact-open) > .mte-compact-summary { display:flex; overflow:hidden; line-height:var(--line-height-normal); }
+.mte-compact :is(td,th):has(.cm-editor) > .mte-compact-summary { display:none !important; }
 /* Bound ellipsis even before the user has assigned explicit column widths. */
 
 
 .mte-summary-text { min-width:0; overflow:hidden; white-space:nowrap; }
+.mte-compact[data-mte-row-height="1"] .mte-summary-text .mte-outline-preview-line { display:inline !important; padding-inline-start:0 !important; text-indent:0 !important; }
+.mte-compact[data-mte-row-height="1"] .mte-summary-text .mte-outline-preview-line:not(:last-child)::after { content:' '; white-space:pre; }
+.mte-compact[data-mte-row-height]:not([data-mte-row-height="1"]):not([data-mte-row-height="0"]) .mte-compact-summary { display:block !important; }
+.mte-compact[data-mte-row-height]:not([data-mte-row-height="1"]):not([data-mte-row-height="0"]) .mte-summary-text { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:var(--mte-height-lines); line-clamp:var(--mte-height-lines); white-space:normal; }
+.mte-compact[data-mte-row-height="2"] { --mte-height-lines:2; }
+.mte-compact[data-mte-row-height="4"] { --mte-height-lines:4; }
+.mte-compact[data-mte-row-height="6"] { --mte-height-lines:6; }
+.mte-compact[data-mte-row-height]:not([data-mte-row-height="0"]):not([data-mte-row-height="1"]) :is(td,th):has(.cm-editor) > .mte-compact-summary { display:none !important; }
 .mte-summary-ellipsis { display:none; flex:none; white-space:pre; color:var(--text-faint); }
-.mte-compact-summary[data-more="true"] > .mte-summary-ellipsis,
-.mte-summary-overflow > .mte-summary-ellipsis { display:inline; }
+.mte-compact[data-mte-row-height="1"] .mte-summary-overflow > .mte-summary-ellipsis { display:inline; }
 /* Match the summary inset when the native cell editor mounts. */
 .mte-compact :is(td,th) .cm-content { padding-inline:0 !important; }
 
@@ -295,8 +310,8 @@ button.mte-outline-arrow:hover { color:var(--text-normal); background:var(--back
 
 /* Rich first-line projection: keep marker geometry, prevent wrapping, and
    reserve room for the arrow that normally sits outside the outline line. */
-.mte-summary-text:has(.mte-outline-arrow) { padding-inline-start:12px; }
-.mte-summary-text > .mte-outline-preview-line { white-space:nowrap !important; }
+.mte-compact[data-mte-row-height="1"] .mte-summary-text:has(.mte-outline-arrow) { padding-inline-start:12px; }
+.mte-compact[data-mte-row-height="1"] .mte-summary-text > .mte-outline-preview-line { white-space:nowrap !important; }
 .mte-summary-text .mte-outline-preview-line.mte-cell-fold-closed::after { content:none; }
 .mte-summary-text .mte-task-body { white-space:nowrap; }
 
@@ -304,3 +319,21 @@ button.mte-outline-arrow:hover { color:var(--text-normal); background:var(--back
 .mte-table .mte-reading-cell { padding:4px 8px; line-height:var(--line-height-normal); }
 
 .mte-width-measure * { white-space:nowrap !important; max-width:none !important; }
+
+/* Generated lookup values never become native editable cell content. */
+.mte-lookup-value { margin:0; white-space:normal; pointer-events:none; }
+.mte-lookup-value > :first-child { margin-top:0; }
+.mte-lookup-value > :last-child { margin-bottom:0; }
+.mte-lookup-value.mte-lookup-placeholder { color:#999 !important; }
+
+/* An empty lookup cell remains the native editor, with a display-only hint. */
+td[data-mte-lookup-editing] .cm-line:only-child:has(> br:only-child)::before {
+  content:"自动引用 · 输入可覆盖"; position:absolute; color:var(--text-faint);
+  pointer-events:none; white-space:nowrap; font-size:0.85em;
+}
+/* Keep the native empty wrapper as the pointer target without letting its
+   full-height placeholder push the generated sibling outside the cell. */
+table.table-editor td:has(> .mte-lookup-value) > .table-cell-wrapper {
+  position:absolute; inset:0; height:auto; z-index:1;
+}
+table.table-editor td > .mte-lookup-value { margin:4px 8px; }

@@ -82,6 +82,8 @@ necessary before promotion. Reading-view checkbox support remains outside this b
 
 The top-left table button toggles compact rows (off by default). It writes only
 `<!-- treeTable height: 1 -->` before the table, without column/id parameters or JSON state.
+
+The row-height control offers Default, Low (1 line), Medium (2 lines), High (4 lines), and Extra high (6 lines). Click its main button to switch between Default and Low; use the adjacent menu for any level. Non-default levels are stored as `<!-- treeTable height: N -->` above the table. The Markdown cell content remains unchanged.
 Existing tree-table declarations remain compatible; auto-detected grouped tables
 need no extra declaration. Clicking a cell opens the native full editor; leaving
 the cell restores its one-line summary. Window blur keeps the active editor open.
@@ -93,3 +95,27 @@ The earlier unnamespaced `<!-- height: 1 -->` is still readable; new toggles wri
 Single-line row height is available on ordinary Markdown tables as well as TreeTables. It does not enable tree grouping or hierarchy for ordinary tables.
 
 Automatic columns hug rendered content up to 550px (the former table CSS threshold). Change “自动列宽上限（px）” in settings. Explicit header widths override this limit. Dragging a column writes only that column; other columns remain automatic.
+
+## YAML lookup columns
+
+An empty cell can display a property from the note linked in another column:
+
+```md
+| 问题 | 模型 <!-- lookup @iqb-判别模型 --> |
+| --- | --- |
+| [[问题甲]] | |
+```
+
+The source defaults to column `0` (zero-based). Use `<!-- lookup @模型 from=1 -->`
+for another source column. `<!-- lookup from=0 property=模型 -->` is equivalent;
+quote property names containing spaces: `<!-- lookup @"判别 模型" -->`.
+
+Works in ordinary Markdown tables and TreeTables, in Live Preview and reading mode.
+Generated values use normal cell styling. Missing properties and empty values display a muted `-`
+with the diagnostic in the cell tooltip. These values are display-only:
+entering text overrides the lookup; clearing it restores the generated value.
+Group rows and source cells without note links are skipped. Multiple source links,
+missing notes, missing properties and invalid column references show a diagnostic.
+Properties use exact YAML keys; zero and false are valid values. Referenced metadata
+changes trigger refresh. Normal Obsidian link renaming keeps the source link current
+when automatic internal-link updates are enabled. No My Transclusion dependency.
