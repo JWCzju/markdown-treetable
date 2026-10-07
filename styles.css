@@ -40,35 +40,44 @@ body table.table-editor.mte-table > tbody > tr > td.mte-cell {
 
 .mte-table .mte-prefix { display: none; }
 .mte-table .mte-group-prefix { display: none; }
-/* Horizontal property groups are a visible projection of # Group<br>Field headers. */
-body table.mte-table > thead > tr.mte-column-groups > th.mte-column-group-cell {
-  padding: 4px 8px 3px;
-  border-top: 0;
-  border-bottom: 0;
-  border-inline: 0;
-  background: var(--background-secondary);
-  text-align: left;
-  vertical-align: bottom;
+/* Group labels live inside the native header cells, so editing keeps Obsidian's row mapping. */
+body table.mte-table > thead > tr.mte-grouped-header > th.mte-group-header-cell {
+  position: relative;
+  cursor: text;
 }
-body table.mte-table > thead > tr.mte-column-groups > th.mte-column-group-cell + th.mte-column-group-cell {
-  border-inline-start-color: transparent;
+body table.mte-table > thead > tr.mte-grouped-header > th.mte-group-header-cell > .table-cell-wrapper,
+body table.mte-table > thead > tr.mte-grouped-header > th.mte-group-header-cell > .mte-reading-cell {
+  margin-top: 28px !important;
 }
-body table.mte-table .mte-column-group-input {
+body table.mte-table .mte-header-group-prefix,
+body table.mte-table .mte-header-group-break { display: none; }
+body table.mte-table .mte-column-group-label {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
-  min-width: 0;
-  padding: 0;
+  height: 28px;
+  padding: 4px 8px;
   border: 0;
-  outline: 0;
-  background: transparent;
+  border-radius: 0;
+  background: var(--background-secondary);
   box-shadow: none;
   color: var(--text-muted);
-  font-size: var(--font-smallest);
-  font-weight: 600;
+  font: inherit;
+  font-weight: 400;
   text-align: left;
+  pointer-events: none;
 }
-body table.mte-table .mte-column-group-input:focus {
-  color: var(--text-normal);
-  box-shadow: 0 1px 0 var(--interactive-accent);
+body table.mte-table > thead > tr.mte-grouped-header > th.mte-group-header-cell::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -1px;
+  height: 28px;
+  width: 1px;
+  background: var(--background-secondary);
+  z-index: 1;
+  pointer-events: none;
 }
 body table.mte-table > tbody > tr.mte-group > td {
   background: color-mix(in srgb, var(--mte-header-color, var(--background-secondary)) 50%, var(--background-primary));
