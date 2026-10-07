@@ -270,7 +270,16 @@ class MyTableExtended extends Plugin {
     if (!table?.valid) { this.compactTable.clean(element); return; }
     if (table.tree === false) { this.compactTable.apply(element, table); return; }
     element.classList.add('mte-table');
-    element.classList.toggle('mte-grouped', table.rows.some(row => row.group));
+    const hasRowGroups = table.rows.some(row => row.group);
+    const horizontalOnly = table.headerGroups?.some(Boolean) && !hasRowGroups;
+    element.classList.toggle('mte-grouped', hasRowGroups);
+    element.classList.toggle('mte-horizontal-only', horizontalOnly);
+    if (horizontalOnly) {
+      for (const row of rows) {
+        row.style.removeProperty('--mte-inset');
+        for (const cell of row.cells) cell.style.removeProperty('--mte-inset');
+      }
+    }
     for (const leaf of this.app.workspace.getLeavesOfType('markdown')) {
       const nativeTable = leaf.view.editMode?.tableCell?.table;
       if (nativeTable?.tableEl === element) this.adaptNavigation(nativeTable);
@@ -379,6 +388,7 @@ class MyTableExtended extends Plugin {
   cleanup(element) {
     element.classList.remove('mte-table');
     element.classList.remove('mte-grouped');
+    element.classList.remove('mte-horizontal-only');
     element.style.removeProperty('--mte-header-color');
     for (const row of element.querySelectorAll(':scope > thead > tr.mte-grouped-header')) row.classList.remove('mte-grouped-header');
     for (const cell of element.querySelectorAll(':scope > thead > tr > th.mte-group-header-cell')) cell.classList.remove('mte-group-header-cell');

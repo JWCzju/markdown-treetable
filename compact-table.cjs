@@ -11,10 +11,17 @@ class CompactTable {
     if (!r) {
       r = {model, view}; this.records.set(table,r);
       if (view) {
-        const caption=document.createElement('caption');caption.className='mte-table-tools';
-        const button=document.createElement('button');button.type='button';button.className='mte-height-toggle';
-        const menuButton=document.createElement('button');menuButton.type='button';menuButton.className='mte-height-menu';
-        setIcon(button,'rows-3');setIcon(menuButton,'chevron-down');caption.append(button,menuButton);table.prepend(caption);r.caption=caption;r.button=button;r.menuButton=menuButton;
+        const captions=[...table.querySelectorAll(':scope > caption.mte-table-tools')];
+        const caption=captions.shift() || document.createElement('caption');
+        for(const duplicate of captions) duplicate.remove();
+        caption.className='mte-table-tools';
+        const button=caption.querySelector(':scope > .mte-height-toggle') || document.createElement('button');button.type='button';button.className='mte-height-toggle';
+        const menuButton=caption.querySelector(':scope > .mte-height-menu') || document.createElement('button');menuButton.type='button';menuButton.className='mte-height-menu';
+        if(!button.parentElement)setIcon(button,'rows-3');
+        if(!menuButton.parentElement)setIcon(menuButton,'chevron-down');
+        if(!button.parentElement)caption.append(button);
+        if(!menuButton.parentElement)caption.append(menuButton);
+        if(!caption.parentElement)table.prepend(caption);r.caption=caption;r.button=button;r.menuButton=menuButton;
         for(const control of [button,menuButton])for(const type of ['pointerdown','mousedown'])control.addEventListener(type,e=>{e.preventDefault();e.stopPropagation();});
         button.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();this.toggle(table);});
         menuButton.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();this.showMenu(table);});

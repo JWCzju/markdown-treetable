@@ -109,6 +109,7 @@ body .mte-table button.mte-toggle:hover { background: var(--background-modifier-
 body .mte-table button.mte-toggle svg { width: 16px; height: 16px; stroke-width: 3; }
 
 body table.mte-grouped > tbody > tr:not(.mte-group) { --mte-inset: 1.5em; }
+body table.mte-horizontal-only > tbody > tr { --mte-inset: 0 !important; }
 body table.mte-grouped > tbody > tr:not(.mte-group) > td:first-child {
   position: relative;
 }
