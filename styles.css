@@ -53,7 +53,7 @@ body table.mte-table .mte-header-group-prefix,
 body table.mte-table .mte-header-group-break { display: none; }
 body table.mte-table .mte-column-group-label {
   position: absolute;
-  top: 12px;
+  top: 8px;
   left: 12px;
   right: 4px;
   height: 24px;
