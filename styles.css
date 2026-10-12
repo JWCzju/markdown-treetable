@@ -188,12 +188,6 @@ button.mte-outline-arrow:hover { color:var(--text-normal); background:var(--back
   text-indent: calc(-1 * var(--mte-task-prefix)) !important;
 }
 .mte-outline-task .mte-task-box { margin-inline-end: .65em !important; }
-.mte-outline-preview-line.mte-outline-task-done .mte-task-body,
-.mte-outline-editor .mte-outline-task-done {
-  color: var(--text-muted);
-  text-decoration: var(--checklist-done-decoration, line-through);
-}
-
 /* Match Obsidian list dots: use a geometric dot, not the font's bullet glyph. */
 .mte-outline-marker:not(.mte-outline-ordered)::before {
   content:''; width:var(--list-bullet-size,.3em); height:var(--list-bullet-size,.3em);
@@ -237,6 +231,8 @@ button.mte-outline-arrow:hover { color:var(--text-normal); background:var(--back
 .mte-cell-fold-closed::before { background:var(--interactive-accent); box-shadow:0 0 0 .14em color-mix(in srgb,var(--interactive-accent) 18%,transparent); }
 /* Cell outliner visual baseline: one native-size marker, no guide rails or extra slot. */
 .mte-outline-preview-line { background-image:none !important; padding-inline-start:calc(var(--mte-outline-indent,0em) + 1.35em) !important; text-indent:-1.35em !important; }
+.mte-outline-preview-line.mte-outline-continuation { text-indent:0 !important; }
+.mte-outline-editor .mte-outline-edit-line.mte-outline-continuation { text-indent:0 !important; }
 .mte-outline-marker:not(.mte-outline-ordered), .mte-outline-bullet-widget { width:1.35em !important; font-size:0 !important; }
 .mte-outline-marker:not(.mte-outline-ordered)::before, .mte-outline-bullet-widget::before { content:'•' !important; position:static !important; transform:none !important; display:inline !important; width:auto !important; height:auto !important; margin:0 !important; color:var(--text-faint) !important; font-size:var(--font-text-size) !important; }
 .mte-cell-fold-parent::before { display:none !important; }

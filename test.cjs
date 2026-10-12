@@ -18,6 +18,7 @@ test('standalone block IDs after a tree table do not become table rows', () => {
 const assert = require('node:assert/strict');
 const { parse, folded, visibility } = require('./model.cjs');
 const { headerGroupChange } = require('./header-groups.cjs');
+const { continuationContexts } = require('./cell-outline-lines.cjs');
 
 test('visible header groups preserve the physical header and widths', () => {
   const source = '| # Travel<br>Hotel <!-- width=173 --> | Room | # Gear<br>Phone | Charger |\n| --- | --- | --- | --- |\n| Root | - [ ] | | |';
@@ -82,6 +83,22 @@ test('top-level groups remain foldable when followed by nested groups', () => {
   assert.deepEqual(visibility(table.rows, { [table.rows[1].key]: { explicit: '', closed: true } }), [false, false, true, false, false]);
 });
 const fixture = '<!-- tree-table column="Q" id="test" -->\n\n| Q | A |\n| --- | --- |\n| Root | text |\n| >- Child | [[Note\\|Alias]] |\n| >> Leaf | a\\|b |\n| Other | text |';
+
+test('indented continuation lines align to their current list item and plain text stays independent', () => {
+  const contexts = continuationContexts([
+    '- 一级分组',
+    '  - 二级元素',
+    '    描述1',
+    '    描述第二行',
+    '  - 同层项目',
+    '    同层续行',
+    '- 下一个一级项',
+    '  一级续行',
+    '未缩进的普通文本',
+    '  不能继承旧节点'
+  ]);
+  assert.deepEqual(contexts, [null, null, { depth: 2, skip: 4 }, { depth: 2, skip: 4 }, null, { depth: 2, skip: 4 }, null, { depth: 0, skip: 2 }, null, null]);
+});
 
 test('column accepts zero-based numeric syntax with or without quotes, id is optional', () => {
   for (const marker of ['<!-- tree-table column=0 -->', '<!-- tree-table column="0" -->', '<!-- tree-table -->']) {

@@ -2,6 +2,7 @@ const { Compartment } = require('@codemirror/state');
 const { foldService, codeFolding, foldCode, unfoldCode, foldedRanges, foldEffect, unfoldEffect } = require('@codemirror/language');
 const { ViewPlugin, Decoration, WidgetType, EditorView } = require('@codemirror/view');
 const { setIcon } = require('obsidian');
+const { node, continuationContexts } = require('./cell-outline-lines.cjs');
 function arrow(closed) {
   const button = document.createElement('button');
   button.type = 'button'; button.className = 'mte-outline-arrow'; button.tabIndex = -1;
@@ -62,6 +63,8 @@ const bullets = ViewPlugin.fromClass(class {
   update(update) { if (update.docChanged || update.selectionSet || update.transactions.some(t=>t.effects.some(e=>e.is(foldEffect)||e.is(unfoldEffect)))) this.updateMarks(update.view); }
   updateMarks(view) {
     const marks = [];
+    const lines = view.state.doc.toString().split('\n');
+    const continuations = continuationContexts(lines);
     for (let i=1; i<=view.state.doc.lines; i++) {
       const line=view.state.doc.line(i), end=endOfSubtree(view.state.doc,i);
       if (end<=i) continue;
@@ -69,15 +72,28 @@ const bullets = ViewPlugin.fromClass(class {
       foldedRanges(view.state).between(line.to,line.to,from=>{if(from===line.to)closed=true;});
       marks.push(Decoration.widget({widget:new FoldArrow(line.to,view.state.doc.line(end).to,closed),side:-1}).range(line.from));
     }
-    for (let i=1; i<=view.state.doc.lines; i++) { const line=view.state.doc.line(i); const n=node(line.text); if(n) { marks.push(Decoration.line({attributes:{class:'mte-outline-edit-line'+(n.task?' mte-outline-task':'')+(n.checked?' mte-outline-task-done':''),style:outlineStyle(n.depth,ancestorDepths(view.state.doc.toString().split('\n'),i-1))}}).range(line.from)); const prefixEnd=Math.min(line.to,line.from+n.indent.length+n.marker.length+(n.task?5:1)); const selected=view.state.selection.ranges.some(r=>!r.empty && r.from<prefixEnd && r.to>line.from); if(selected) continue; if(n.task) marks.push(Decoration.replace({widget:new TaskBox(n.checked,line.from+n.indent.length+n.marker.length+2)}).range(line.from,prefixEnd)); else if(!/^\d/.test(n.marker)) marks.push(Decoration.replace({widget:new Bullet(line.to,view.state.doc.line(endOfSubtree(view.state.doc,i)).to,(()=>{let closed=false;foldedRanges(view.state).between(line.to,line.to,(from)=>{if(from===line.to)closed=true;});return closed;})())}).range(line.from,line.from+n.indent.length+2)); } }
+    for (let i=1; i<=view.state.doc.lines; i++) {
+      const line=view.state.doc.line(i), n=node(line.text), continuation=continuations[i-1];
+      if (continuation) {
+        marks.push(Decoration.line({attributes:{class:'mte-outline-edit-line mte-outline-continuation',style:outlineStyle(continuation.depth)}}).range(line.from));
+        const prefixEnd=line.from+continuation.skip;
+        if (!view.state.selection.ranges.some(r=>r.from<prefixEnd && r.to>=line.from)) {
+          marks.push(Decoration.replace({}).range(line.from,prefixEnd));
+        }
+        continue;
+      }
+      if (!n) continue;
+      marks.push(Decoration.line({attributes:{class:'mte-outline-edit-line'+(n.task?' mte-outline-task':'')+(n.checked?' mte-outline-task-done ps-md-task-done-text':''),style:outlineStyle(n.depth,ancestorDepths(lines,i-1))}}).range(line.from));
+      const prefixEnd=Math.min(line.to,line.from+n.indent.length+n.marker.length+(n.task?5:1));
+      const selected=view.state.selection.ranges.some(r=>!r.empty && r.from<prefixEnd && r.to>line.from);
+      if(selected) continue;
+      if(n.task) marks.push(Decoration.replace({widget:new TaskBox(n.checked,line.from+n.indent.length+n.marker.length+2)}).range(line.from,prefixEnd));
+      else if(!/^\d/.test(n.marker)) marks.push(Decoration.replace({widget:new Bullet(line.to,view.state.doc.line(endOfSubtree(view.state.doc,i)).to,(()=>{let closed=false;foldedRanges(view.state).between(line.to,line.to,(from)=>{if(from===line.to)closed=true;});return closed;})())}).range(line.from,line.from+n.indent.length+2));
+    }
     this.decorations=Decoration.set(marks, true);
   }
 }, {decorations: value=>value.decorations});
 
-function node(text) {
-  const m = /^(\s*(?:>+[+-]?\s+)?)([-+*]|\d+[.)]) (.*)$/.exec(text);
-  return m && { indent: m[1], depth: /^\s*/.exec(m[1])[0].replace(/\t/g, '    ').length, marker: m[2], body: m[3], task: /^\[[ xX]\](?:\s|$)/.test(m[3]), checked: /^\[[xX]\]/.test(m[3]) };
-}
 function endOfSubtree(doc, number) {
   const parent = node(doc.line(number).text);
   if (!parent) return number;
@@ -291,6 +307,7 @@ class CellOutline {
           return text;
         });
         if (!lines.some(text => node(text))) continue;
+        const continuations = continuationContexts(lines);
         const address = sourceCell(view, wrapper);
         const original = [...wrapper.childNodes];
         wrapper.replaceChildren();
@@ -298,9 +315,10 @@ class CellOutline {
         lines.forEach((text, i) => {
           const line = document.createElement('span'); line.className = 'mte-outline-preview-line';
           const item = node(text);
+          const continuation = continuations[i];
           let isClosed = false;
           let hasChildren = false;
-          let skip = item ? item.indent.length + item.marker.length + 1 + (item.task ? 4 : 0) : 0;
+          let skip = item ? item.indent.length + item.marker.length + 1 + (item.task ? 4 : 0) : continuation?.skip || 0;
           const bodyNodes = parts[i].map(child => {
             if (child.nodeType !== 3) return child;
             const value = child.textContent.slice(skip);
@@ -336,11 +354,18 @@ class CellOutline {
               box.addEventListener('pointerdown', e=>e.stopPropagation());
               box.addEventListener('mousedown', e=>{e.preventDefault();e.stopPropagation();});
               box.addEventListener('click', e=>{e.stopPropagation();this.togglePreview(view, wrapper, i, item.checked);});
-              const body=document.createElement('span'); body.className='mte-task-body'; body.append(...bodyNodes);
+              const body=document.createElement('span'); body.className='mte-task-body'+(item.checked?' ps-md-task-done-text':''); body.append(...bodyNodes);
               const slot=document.createElement('span'); slot.className='mte-task-slot'; slot.append(box);
               line.append(slot,body);
             } else line.append(bullet, ...bodyNodes);
-          } else line.append(...bodyNodes);
+          } else {
+            if (hiddenDepth !== null) line.classList.add('mte-cell-fold-hidden');
+            if (continuation) {
+              line.classList.add('mte-outline-continuation');
+              line.style.cssText = outlineStyle(continuation.depth);
+            }
+            line.append(...bodyNodes);
+          }
           if (isClosed && hasChildren) hiddenDepth = item.depth;
           wrapper.append(line); if (i < lines.length - 1) wrapper.append(document.createElement('br'));
         });
