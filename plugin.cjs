@@ -7,6 +7,7 @@ const { CompactTable } = require('./compact-table.cjs');
 const { CellOutline } = require('./cell-outline.cjs');
 const { TableLookup } = require('./lookup.cjs');
 const { RowDetail } = require('./row-detail.cjs');
+const { CellCodeBlocks } = require('./cell-code-block.cjs');
 
 function renderedTableCandidate(candidates, element, info) {
   const rows = element.querySelectorAll('tbody > tr');
@@ -49,6 +50,7 @@ class MyTableExtended extends Plugin {
     this.addSettingTab(new CellSettings(this.app, this));
     this.adapters = new Map();
     this.cellOutline = new CellOutline(this);
+    this.cellCodeBlocks = new CellCodeBlocks(this);
     this.tableLookup = new TableLookup(this);
     this.rowDetail = new RowDetail(this);
     this.columnWidths = new ColumnWidths(this);
@@ -145,11 +147,12 @@ class MyTableExtended extends Plugin {
     if (this.composing) return;
     this.observer.disconnect();
     this.compactTable.prune();
+    this.cellCodeBlocks.prune();
     try {
       for (const [table, originals] of this.adapters) if (!table.tableEl?.isConnected) { Object.assign(table, originals); this.adapters.delete(table); }
       for (const [element, table] of this.reading) {
         if (!element.isConnected) this.reading.delete(element);
-        else this.decorate(element, table);
+        else { this.decorate(element, table); this.cellCodeBlocks.decorate(element, table); }
       }
       this.scanEmbeddedTables();
       for (const leaf of this.app.workspace.getLeavesOfType('markdown')) {
@@ -160,6 +163,7 @@ class MyTableExtended extends Plugin {
         // loading its source. This is not an external edit of the stored note.
         if (!cm.state.doc.length) continue;
         this.foldMemory.sync(view.file.path, cm.state.doc.toString());
+        this.cellCodeBlocks.attachEditor(view);
         this.cellOutline.scan(view);
         this.columnWidths.scan(view);
         const model = this.memoryTables(cm.state.doc.toString(), view.file.path, true);
@@ -168,6 +172,7 @@ class MyTableExtended extends Plugin {
             const start = cm.state.doc.lineAt(cm.posAtDOM(element)).number - 1;
             const table = model.find(candidate => candidate.start === start);
             this.decorate(element, table);
+            this.cellCodeBlocks.decorate(element, table);
           } catch (_) { /* The native editor can replace a table during this pass. */ }
         }
         // Obsidian may retain a cloned table editor whose DOM position no longer
@@ -177,7 +182,7 @@ class MyTableExtended extends Plugin {
           const first = element.querySelector('tbody > tr > td')?.textContent?.trim() || '';
           const count = element.querySelectorAll('tbody > tr').length;
           const candidate = model.find(t => t.rows.length === count && t.rows[0]?.cells[0] === first);
-          if (candidate) this.decorate(element, candidate);
+          if (candidate) { this.decorate(element, candidate); this.cellCodeBlocks.decorate(element, candidate); }
         }
       }
     } finally { this.observe(); }
@@ -558,6 +563,7 @@ class MyTableExtended extends Plugin {
     clearTimeout(this.memorySaveTimer);
     this.saveState();
     this.compactTable.destroy();
+    this.cellCodeBlocks.destroy();
     for(const wrapper of document.querySelectorAll('.mte-reading-cell'))wrapper.replaceWith(...wrapper.childNodes);
     this.cellOutline.destroy();
     this.columnWidths.destroy();

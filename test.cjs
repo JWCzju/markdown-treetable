@@ -19,6 +19,23 @@ const assert = require('node:assert/strict');
 const { parse, folded, visibility } = require('./model.cjs');
 const { headerGroupChange } = require('./header-groups.cjs');
 const { continuationContexts } = require('./cell-outline-lines.cjs');
+const { fencedCell } = require('./cell-code-source.cjs');
+
+test('only complete fenced table cells decode into block source', () => {
+  assert.equal(fencedCell('```mermaid<br>classDiagram<br>Animal <|-- Duck<br>```'),
+    '```mermaid\nclassDiagram\nAnimal <|-- Duck\n```');
+  assert.equal(fencedCell('~~~js<br>const n = 1;<br>~~~'), '~~~js\nconst n = 1;\n~~~');
+  for (const source of ['`inline`<br>text', '```js<br>missing close', 'before<br>```js<br>x<br>```', '```js<br>x<br>``']) {
+    assert.equal(fencedCell(source), null);
+  }
+});
+
+test('table parsing unescapes code pipes before fenced-cell rendering', () => {
+  const source = '| Name | Diagram |\n| --- | --- |\n| Demo | ```mermaid<br>classDiagram<br>Animal <\\|-- Duck<br>``` |';
+  const cell = parse(source, 'diagram.md', {includePlain: true})[0].rows[0].cells[1];
+  assert.equal(fencedCell(cell), '```mermaid\nclassDiagram\nAnimal <|-- Duck\n```');
+  assert.match(source, /<\\\|--/);
+});
 
 test('visible header groups preserve the physical header and widths', () => {
   const source = '| # Travel<br>Hotel <!-- width=173 --> | Room | # Gear<br>Phone | Charger |\n| --- | --- | --- | --- |\n| Root | - [ ] | | |';

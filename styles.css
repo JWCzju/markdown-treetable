@@ -161,6 +161,9 @@ button.mte-outline-arrow {
 }
 button.mte-outline-arrow svg { width:12px; height:12px; }
 button.mte-outline-arrow:hover { color:var(--text-normal); background:var(--background-modifier-hover); }
+.mte-codeblock-preview { max-width:100%; overflow:auto; }
+.mte-codeblock-preview > :first-child { margin-top:0; }
+.mte-codeblock-preview > :last-child { margin-bottom:0; }
 .mte-outline-editor, .mte-outline-editor .cm-scroller, .mte-outline-editor .cm-content { overflow:visible !important; }
 .mte-outline-marker:not(.mte-outline-ordered) {
   display: inline-block;

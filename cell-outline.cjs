@@ -3,6 +3,7 @@ const { foldService, codeFolding, foldCode, unfoldCode, foldedRanges, foldEffect
 const { ViewPlugin, Decoration, WidgetType, EditorView } = require('@codemirror/view');
 const { setIcon } = require('obsidian');
 const { node, continuationContexts } = require('./cell-outline-lines.cjs');
+const { fencedCell } = require('./cell-code-source.cjs');
 function arrow(closed) {
   const button = document.createElement('button');
   button.type = 'button'; button.className = 'mte-outline-arrow'; button.tabIndex = -1;
@@ -379,6 +380,7 @@ class CellOutline {
     const cell = (view.currentMode || view.editMode)?.tableCell;
     const cm = cell?.editor?.cm;
     if (!cm || this.editors.has(cm)) return;
+    if (fencedCell(cm.state.doc.toString().replace(/\n/g, '<br>'))) return;
     const path = view.file.path;
     const nodes = cachedNodes || this.plugin.foldMemory.sync(path, view.editor.getValue());
     const compartment = new Compartment();
