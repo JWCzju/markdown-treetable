@@ -2,7 +2,9 @@
 
 **[English](README.md) | [简体中文](README.zh-CN.md)**
 
-TreeTable enhances ordinary Markdown tables with foldable groups, nested records, rich cell editing, and draggable column widths. It keeps the table as Markdown data, so your existing notes and AI workflows remain easy to read and edit.
+TreeTable enhances native Markdown table syntax with foldable row groups, Outliner-style cell editing, and draggable column widths.
+
+![TreeTable overview](https://raw.githubusercontent.com/JWCzju/markdown-treetable/main/tree-table-demo.gif)
 
 ## Features
 
@@ -10,8 +12,6 @@ TreeTable enhances ordinary Markdown tables with foldable groups, nested records
 2. **Rich Markdown cells**: edit lists, tasks, images, embeds, and fenced code blocks directly in a cell.
 3. **Column widths**: drag the visible separators to resize columns.
 4. **Single-line display**: switch long tables to a compact one-line view for scanning.
-
-![TreeTable single-line display](https://raw.githubusercontent.com/JWCzju/markdown-treetable/main/tree-table-demo.gif)
 
 ## How to use
 

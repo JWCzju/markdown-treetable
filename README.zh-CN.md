@@ -2,7 +2,9 @@
 
 **[English](README.md) | [简体中文](README.zh-CN.md)**
 
-TreeTable 是 Markdown 表格的增强语法，支持分组折叠、富文本编辑和列宽调整。它保留普通 Markdown 表格作为数据格式，对现有数据和 AI 编辑都友好。
+TreeTable 通过增强 Markdown 原生表格语法，让你获得表格行分组与折叠、单元格 Outliner 编辑、拖拽宽度等能力。
+
+![TreeTable 单行展示](https://raw.githubusercontent.com/JWCzju/markdown-treetable/main/tree-table-demo.gif)
 
 ## 核心功能
 
@@ -10,8 +12,6 @@ TreeTable 是 Markdown 表格的增强语法，支持分组折叠、富文本编
 2. **富 Markdown 单元格**：直接在单元格内编辑列表、任务、图片、嵌入和围栏代码块。
 3. **调整列宽**：拖动可视化分隔线即可改变列宽。
 4. **单行展示**：将长表格切换为紧凑的单行视图，便于扫描。
-
-![TreeTable 单行展示](https://raw.githubusercontent.com/JWCzju/markdown-treetable/main/tree-table-demo.gif)
 
 ## 如何使用
 
