@@ -1,5 +1,7 @@
 node_modules/
 dist/
+dist-store/
 .DS_Store
+data.json
 
 /node_modules

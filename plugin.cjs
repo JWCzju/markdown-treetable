@@ -5,8 +5,7 @@ const { FoldMemory } = require('./fold-memory.cjs');
 const { EditorView } = require('@codemirror/view');
 const { CompactTable } = require('./compact-table.cjs');
 const { CellOutline } = require('./cell-outline.cjs');
-const { TableLookup } = require('./lookup.cjs');
-const { RowDetail } = require('./row-detail.cjs');
+const RowDetail = __TREETABLE_LOCAL__ ? require('./row-detail.cjs').RowDetail : null;
 const { CellCodeBlocks } = require('./cell-code-block.cjs');
 
 function renderedTableCandidate(candidates, element, info) {
@@ -51,8 +50,7 @@ class MyTableExtended extends Plugin {
     this.adapters = new Map();
     this.cellOutline = new CellOutline(this);
     this.cellCodeBlocks = new CellCodeBlocks(this);
-    this.tableLookup = new TableLookup(this);
-    this.rowDetail = new RowDetail(this);
+    this.rowDetail = RowDetail ? new RowDetail(this) : null;
     this.columnWidths = new ColumnWidths(this);
     this.compactTable = new CompactTable(this);
     this.textSelectionGuards = new Map();
@@ -61,6 +59,7 @@ class MyTableExtended extends Plugin {
     this.composing = false;
     this.observer = new MutationObserver(records => {
       this.attachCellOutlineFromMutations(records);
+      this.restoreCodeBlocksFromMutations(records);
       this.schedule();
     });
     this.imageLoads = new WeakSet();
@@ -131,11 +130,40 @@ class MyTableExtended extends Plugin {
       const editors = added.matches?.('.cm-editor') ? [added] : added.querySelectorAll?.('.cm-editor');
       if (!editors) continue;
       for (const cm of editors) {
+        if (cm.closest('.mte-codeblock-preview')) continue;
         if (!cm.closest('table.table-editor')) continue;
         const leaf = this.app.workspace.getLeavesOfType('markdown').find(candidate => candidate.view.containerEl.contains(cm));
         if (leaf?.view && this.cellOutline.enabled(leaf.view)) this.cellOutline.attach(leaf.view);
       }
     }
+  }
+  restoreCodeBlocksFromMutations(records) {
+    const tables = new Set();
+    for (const record of records) {
+      const target = record.target.nodeType === Node.ELEMENT_NODE ? record.target : record.target.parentElement;
+      const enclosing = target?.closest('table.table-editor');
+      if (enclosing && !target.closest('.mte-codeblock-preview')) tables.add(enclosing);
+      for (const node of record.addedNodes) {
+        if (node.nodeType !== Node.ELEMENT_NODE || node.closest('.mte-codeblock-preview')) continue;
+        if (node.matches('table.table-editor')) tables.add(node);
+        for (const table of node.querySelectorAll('table.table-editor')) tables.add(table);
+      }
+    }
+    if (!tables.size || this.composing) return;
+    this.observer.disconnect();
+    try {
+      for (const table of tables) {
+        if (!table.isConnected) continue;
+        const leaf = this.app.workspace.getLeavesOfType('markdown').find(l => l.view.containerEl.contains(table));
+        const cm = leaf?.view.editor?.cm;
+        if (!cm || !leaf.view.file) continue;
+        try {
+          const start = cm.state.doc.lineAt(cm.posAtDOM(table)).number - 1;
+          const model = this.memoryTables(cm.state.doc.toString(), leaf.view.file.path, true).find(t => t.start === start);
+          this.cellCodeBlocks.decorate(table, model);
+        } catch (_) { /* Native table still assembling; normal scan follows. */ }
+      }
+    } finally { this.observe(); }
   }
   schedule() {
     if (this.queued || this.composing) return;
@@ -241,7 +269,6 @@ class MyTableExtended extends Plugin {
   }
 
   decorate(element, table) {
-    this.tableLookup.apply(element, table);
     // Reading cells lack the native editor's inner content box. Match its
     // typography and padding without changing row/column or fold ownership.
     if(table?.valid && table.tree !== false && !element.classList.contains('table-editor')) {
@@ -330,7 +357,7 @@ class MyTableExtended extends Plugin {
       cell.appendChild(button);
     });
     this.hidePrefixes(element, table);
-    this.rowDetail.attach(element, table);
+    this.rowDetail?.attach(element, table);
     // Let the browser own text drag selection inside tree-table cells. Obsidian's
     // table editor otherwise treats a drag as a multi-cell selection.
     this.guardTextSelection(element);
@@ -509,7 +536,7 @@ class MyTableExtended extends Plugin {
 
   saveState() {
     const data = JSON.parse(JSON.stringify({ foldMemory: this.foldMemory.data, legacyFoldState: this.legacyFoldState, cellMarkdownGlobal: this.cellMarkdownGlobal, autoDetectTree: this.autoDetectTree, autoColumnMaxWidth: this.autoColumnMaxWidth }));
-    this.saveQueue = (this.saveQueue || Promise.resolve()).then(() => this.saveData(data)).catch(error => console.error('My Table Extended: state save failed', error));
+    this.saveQueue = (this.saveQueue || Promise.resolve()).then(() => this.saveData(data)).catch(error => console.error('TreeTable: state save failed', error));
     return this.saveQueue;
   }
   async setAll(closed) {

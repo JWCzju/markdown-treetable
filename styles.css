@@ -1,3 +1,121 @@
+/* Shared Obsidian property surface; YAML Ext owns native property mounting. */
+body .metadata-properties-heading:has(> .yaml-ext-height-trigger) { display:flex; align-items:center; gap:12px; padding-right:0; width:max-content; max-width:100%; }
+body .metadata-properties-heading > .yaml-ext-height-trigger { position:relative; z-index:1; transform:none; flex:0 0 auto; white-space:nowrap; cursor:pointer; color:var(--text-muted); }
+body .metadata-properties .metadata-property-value.mpv-enhanced > .metadata-input-longtext { display: none !important; }
+.metadata-property-value.mpv-pending > .metadata-input-longtext { visibility: hidden; }
+.metadata-property-value.mpv-pending > .mpv-field { min-height: 28px; }
+.metadata-property-value.mpv-enhanced { align-items: flex-start; }
+/* Feishu DB field groups indent the whole row by 24px. Keep the key nested,
+   while the value column stays on the same vertical rail as ungrouped rows. */
+.metadata-properties.fdb-grouped-properties > .metadata-property.fdb-property-group-member > .metadata-property-value {
+  margin-inline-start: -24px;
+  width: calc(100% + 24px);
+}
+.mpv-field { flex: 1; min-width: 0; width: 100%; --mpv-lines: 24; --mpv-max-height: calc(var(--mpv-lines) * 1lh + var(--mpv-padding-top, 4px) + var(--mpv-padding-bottom, 4px)); }
+.mpv-field[hidden] { display:none; }
+body.yaml-ext-height-low .mpv-field { --mpv-lines: 1; }
+body.yaml-ext-height-mid .mpv-field { --mpv-lines: 2; }
+body.yaml-ext-height-high .mpv-field { --mpv-lines: 4; }
+body.yaml-ext-height-xhigh .mpv-field { --mpv-lines: 6; }
+body.yaml-ext-height-xxhigh .mpv-field { --mpv-lines: 24; }
+body.yaml-ext-height-auto .mpv-field { --mpv-max-height: none; }
+.mpv-field .mpv-preview[hidden] { display: none; }
+.mpv-preview { position: relative; min-height: 28px; padding: var(--mpv-padding-top, 4px) var(--mpv-padding-right, 8px) var(--mpv-padding-bottom, 4px) var(--mpv-padding-left, 8px); border-radius: var(--radius-s); cursor: text; overflow-wrap: anywhere; max-height: var(--mpv-max-height); overflow: hidden; }
+.mpv-preview-content { max-height: calc(var(--mpv-lines) * 1lh); overflow: hidden; }
+body.yaml-ext-height-auto .mpv-preview-content { max-height: none; }
+.mpv-preview-content > :first-child { margin-top: 0; }
+.mpv-preview-content > :last-child { margin-bottom: 0; }
+.mpv-field .mpv-preview-content li { padding-block: 0; }
+body.yaml-ext-height-low .mpv-preview { white-space: nowrap; text-overflow: clip; overflow: hidden; }
+.yaml-ext-ellipsis { color: var(--text-muted); font-weight: normal; }
+.mpv-preview:hover { background: var(--background-modifier-hover); }
+.mpv-preview:focus-visible { outline: 1px solid var(--interactive-accent); }
+.mpv-preview > :first-child { margin-top: 0; }
+.mpv-preview > :last-child { margin-bottom: 0; }
+.mpv-preview p, .mpv-preview ul, .mpv-preview ol { margin-block: .2em; }
+.mpv-empty { color: var(--text-faint); }
+.mpv-editor { box-sizing: border-box; margin: 0; border-radius: var(--radius-s); background: var(--background-modifier-form-field); box-shadow: 0 0 0 1px var(--background-modifier-border-focus); }
+.mpv-editor .cm-editor { font-family: inherit; font-size: inherit; line-height: inherit; background: transparent; color: inherit; }
+.mpv-editor .cm-editor.cm-focused { outline: none; }
+.mpv-editor .cm-scroller { font-family: inherit; overflow: auto; max-height: var(--mpv-max-height); font-size: inherit; color: inherit; line-height: inherit; }
+.yaml-ext-editing .mpv-editor .cm-scroller { max-height: min(60vh, 520px); overflow: auto; }
+body .mpv-field .mpv-editor .cm-content { box-sizing: border-box; margin: 0; font-family: inherit; font-size: inherit; color: inherit; line-height: inherit; padding: var(--mpv-padding-top, 4px) 0 var(--mpv-padding-bottom, 4px); min-height: 28px; caret-color: var(--text-normal); }
+body .mpv-field .mpv-editor .cm-line { padding: 0 var(--mpv-padding-right, 8px) 0 var(--mpv-padding-left, 8px); }
+body .mpv-field .mpv-editor .cm-line.mpv-list-line {
+  /* Keep wrapped text under the item text, while the first line reserves the marker. */
+  padding-left: calc(var(--mpv-padding-left, 8px) + var(--mpv-indent) + var(--mpv-marker-width));
+  text-indent: calc(-1 * var(--mpv-marker-width));
+}
+.mpv-editor .mpv-marker { display: inline-block; width: var(--mpv-marker-width, 1.2em); text-indent: 0; color: var(--text-muted); text-align: center; }
+.mpv-editor .mpv-marker input { margin: 0; vertical-align: middle; }
+.ps-md-task-done-text {
+  color: var(--text-faint);
+  text-decoration: var(--checklist-done-decoration, line-through);
+  text-decoration-color: currentColor;
+}
+.mpv-preview-content .task-list-item.is-checked {
+  color: var(--text-faint);
+  text-decoration-color: currentColor;
+}
+.mpv-preview-content .task-list-item.is-checked > :is(ul, ol) { color: var(--text-normal); }
+.mpv-bold { font-weight: 700; }
+.mpv-italic { font-style: italic; }
+.mpv-strike { text-decoration: line-through; }
+.mpv-code { font-family: var(--font-monospace); background: var(--background-modifier-hover); border-radius: 3px; }
+.mpv-link { color: var(--link-color); }
+.mpv-heading { font-weight: 700; }
+.mpv-quote { border-left: 2px solid var(--blockquote-border-color); color: var(--text-muted); }
+.mpv-field[data-save-error]::after { content: attr(data-save-error); display: block; color: var(--text-error); font-size: var(--font-ui-small); }
+
+/* Keep the first text baseline aligned with the native input. */
+.mpv-preview > :first-child { margin-top: 0; }
+.mpv-preview > :last-child { margin-bottom: 0; }
+.mpv-completion {
+  position: fixed;
+  z-index: 1000;
+  min-width: 220px;
+  max-width: calc(100vw - 16px);
+  max-height: 260px;
+  overflow: auto;
+  padding: 4px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  background: var(--background-primary);
+  box-shadow: var(--shadow-s);
+}
+.mpv-completion-item { padding: 5px 8px; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.mpv-completion-label,.mpv-completion-detail { overflow:hidden; text-overflow:ellipsis; }
+.mpv-completion-detail { color:var(--text-muted); font-size:var(--font-ui-smaller); }
+.mpv-completion-item.is-selected { background: var(--background-modifier-hover); }
+
+body.yaml-ext-height-auto .yaml-ext-editing .mpv-editor .cm-scroller { max-height:none; overflow:visible; }
+
+/* YAML Ext can override the document's mode without changing the global body default. */
+.mpv-field[data-mode="low"] { --mpv-lines:1; }
+.mpv-field[data-mode="mid"] { --mpv-lines:2; }
+.mpv-field[data-mode="high"] { --mpv-lines:4; }
+.mpv-field[data-mode="xhigh"] { --mpv-lines:6; }
+.mpv-field[data-mode="xxhigh"] { --mpv-lines:24; }
+.mpv-field[data-mode="auto"] { --mpv-max-height:none; }
+.mpv-field[data-mode="auto"] .mpv-preview-content { max-height:none; }
+.mpv-field[data-mode="auto"] .mpv-editor .cm-scroller { max-height:none; overflow:visible; }
+.mpv-field[data-mode="low"] .mpv-preview { white-space:nowrap; }
+
+.ps-group-toggle { display:flex; align-items:center; gap:8px; width:100%; min-height:30px; padding:4px 8px; border:0; border-radius:6px; box-shadow:none; background:transparent; color:var(--text-muted); font-weight:500; text-align:left; cursor:pointer; }
+.ps-group-toggle:hover, .ps-group-toggle:focus-visible { background:var(--background-modifier-hover); }
+.ps-group-icon, .ps-group-chevron { display:inline-flex; }
+.ps-group-icon svg, .ps-group-chevron svg { width:14px; height:14px; }
+.ps-group-chevron { margin-inline-start:auto; }
+.ps-property-group { margin-top:4px; border:1px solid transparent; border-radius:6px; }
+.ps-property-group:hover, .ps-property-group:focus-within { border-color:var(--background-modifier-border); }
+.ps-property-group > .ps-property-group-title { background:transparent; }
+.ps-property-group > .ps-property-group-title:hover, .ps-property-group > .ps-property-group-title:focus-visible { background:var(--background-modifier-hover); }
+.ps-property-group-content[hidden] { display:none; }
+.ps-property-row { display:grid; grid-template-columns:minmax(6em, min(32%, 232px)) minmax(0, 1fr); align-items:start; min-height:29px; min-width:0; }
+.ps-property-key { min-width:0; min-height:29px; padding:4px 8px 4px 30px; color:var(--text-muted); font-size:var(--font-ui-small); overflow-wrap:anywhere; }
+.ps-property-group .ps-property-key { padding-inline-start:calc(30px + 1.5em); }
+.ps-property-value { min-width:0; font-size:var(--font-ui-small); overflow-wrap:anywhere; }
+
 .mte-table .mte-hidden { display: none !important; }
 
 body table.mte-table > tbody > tr:not(.mte-group) > td.mte-cell {
@@ -389,20 +507,15 @@ body .mte-height-popover button.mte-height-option[aria-checked="true"] { color:v
 
 .mte-width-measure * { white-space:nowrap !important; max-width:none !important; }
 
-/* Generated lookup values never become native editable cell content. */
-.mte-lookup-value { margin:0; white-space:normal; pointer-events:none; }
-.mte-lookup-value > :first-child { margin-top:0; }
-.mte-lookup-value > :last-child { margin-bottom:0; }
-.mte-lookup-value.mte-lookup-placeholder { color:#999 !important; }
-
-/* An empty lookup cell remains the native editor, with a display-only hint. */
-td[data-mte-lookup-editing] .cm-line:only-child:has(> br:only-child)::before {
-  content:"自动引用 · 输入可覆盖"; position:absolute; color:var(--text-faint);
-  pointer-events:none; white-space:nowrap; font-size:0.85em;
-}
-/* Keep the native empty wrapper as the pointer target without letting its
-   full-height placeholder push the generated sibling outside the cell. */
-table.table-editor td:has(> .mte-lookup-value) > .table-cell-wrapper {
-  position:absolute; inset:0; height:auto; z-index:1;
-}
-table.table-editor td > .mte-lookup-value { margin:4px 8px; }
+/* Column width presentation; geometry remains runtime-calculated. */
+.mte-width-scroll { overflow-x:auto!important; overflow-y:hidden!important; max-width:100%!important; padding-bottom:6px; }
+.cm-table-widget.mte-width-scroll > .table-wrapper { overflow:visible!important; }
+table.mte-width-table { display:table!important; table-layout:fixed!important; min-width:0!important; max-width:none!important; }
+table.mte-width-table :is(th,td) { box-sizing:border-box!important; min-width:0!important; max-width:none!important; overflow-wrap:anywhere!important; word-break:normal!important; white-space:normal!important; }
+table.mte-width-table .table-cell-wrapper { min-width:0!important; max-width:100%!important; overflow-wrap:anywhere!important; }
+table.mte-width-table img { max-width:100%!important; height:auto; }
+table.mte-width-table pre { max-width:100%; overflow-x:auto; white-space:pre; }
+table.mte-width-table th { position:relative; }
+.mte-width-grip { position:absolute; top:0; right:-4px; width:8px; cursor:col-resize; z-index:20; touch-action:none; border:0!important; background:transparent!important; padding:0!important; box-shadow:none!important; border-radius:0!important; }
+.mte-width-grip::after { content:""; position:absolute; left:3px; top:0; bottom:0; width:1px; background:transparent; }
+.mte-width-grip:hover::after,.mte-width-grip:focus-visible::after,.mte-width-grip.is-dragging::after { background:var(--interactive-accent); }

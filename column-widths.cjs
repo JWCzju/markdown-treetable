@@ -11,19 +11,6 @@ class ColumnWidths {
     });
     this.observe();
     this.resize=new ResizeObserver(entries=>{for(const entry of entries){const r=this.records.get(entry.target);if(r)this.sizeGrips(r);}});
-    this.style=document.createElement('style');this.style.textContent=`
-    .mte-width-scroll {overflow-x:auto!important;overflow-y:hidden!important;max-width:100%!important;padding-bottom:6px;}
-    .cm-table-widget.mte-width-scroll > .table-wrapper {overflow:visible!important;}
-    table.mte-width-table {display:table!important;table-layout:fixed!important;min-width:0!important;max-width:none!important;}
-    table.mte-width-table :is(th,td) {box-sizing:border-box!important;min-width:0!important;max-width:none!important;overflow-wrap:anywhere!important;word-break:normal!important;white-space:normal!important;}
-    table.mte-width-table .table-cell-wrapper {min-width:0!important;max-width:100%!important;overflow-wrap:anywhere!important;}
-    table.mte-width-table img {max-width:100%!important;height:auto;}
-    table.mte-width-table pre {max-width:100%;overflow-x:auto;white-space:pre;}
-    table.mte-width-table th {position:relative;}
-    .mte-width-grip {position:absolute;top:0;right:-4px;width:8px;cursor:col-resize;z-index:20;touch-action:none;border:0!important;background:transparent!important;padding:0!important;box-shadow:none!important;border-radius:0!important;}
-    .mte-width-grip::after {content:"";position:absolute;left:3px;top:0;bottom:0;width:1px;background:transparent;}
-    .mte-width-grip:hover::after,.mte-width-grip:focus-visible::after,.mte-width-grip.is-dragging::after {background:var(--interactive-accent);}
-    `;document.head.append(this.style);
     plugin.registerMarkdownPostProcessor((el,ctx)=>this.reading(el,ctx));
   }
   observe(){this.observer.observe(document.body,{childList:true,subtree:true});}
@@ -40,6 +27,13 @@ class ColumnWidths {
     const headerRow=table.querySelector('thead > tr:not(.mte-column-groups)');
     const headers=[...(headerRow?.querySelectorAll(':scope > th') || [])];
     if(headers.length!==descriptor.cells.length)return;
+    // A legacy TreeTable instance or a retained native-table rebuild can leave
+    // more than one grip in a header cell. Keep one owner per column so a drag
+    // cannot dispatch competing write-backs for the same Markdown line.
+    for(const th of headers){
+      const grips=[...th.querySelectorAll(':scope > .mte-width-grip')];
+      for(const grip of grips.slice(1))grip.remove();
+    }
     const auto=this.measure(table,descriptor);
     const widths=descriptor.cells.map((c,i)=>{const m=c.text.match(WIDTH);return m?clamp(+m[1]):auto[i];});
     if(!record){
@@ -56,8 +50,7 @@ class ColumnWidths {
   }
   measure(table,descriptor){
     const max=this.plugin.autoColumnMaxWidth;
-    const lookupSamples=this.plugin.tableLookup?.widthSamples.get(table)||[];
-    const key=JSON.stringify(lookupSamples)+':'+max+':'+descriptor.source.replace(/<!--\s*width\s*=\s*\d+\s*-->/g,'');
+    const key=max+':'+descriptor.source.replace(/<!--\s*width\s*=\s*\d+\s*-->/g,'');
     const cached=this.autoWidths.get(key);if(cached)return cached;
     const tree=require('./model.cjs').parse(descriptor.source,'',{autoDetect:this.plugin.autoDetectTree})[0];
     const inset=tree ? 44+(tree.rows.some(r=>r.group)?24:0)+Math.max(0,...tree.rows.map(r=>r.depth||0))*22 : 0;
@@ -83,12 +76,6 @@ class ColumnWidths {
         probe.style.cssText='width:max-content;max-width:none;white-space:nowrap;';
         host.append(probe);probes.push({probe,index});
       }
-    }
-    // Empty-source lookup cells still contribute their generated content width.
-    for(const sample of lookupSamples) {
-      const probe=document.createElement('div');probe.textContent=sample.text;
-      probe.style.cssText='width:max-content;max-width:none;white-space:nowrap;';
-      host.append(probe);probes.push({probe,index:sample.index});
     }
     table.ownerDocument.body.append(host);
     const widths=descriptor.cells.map(()=>60);
@@ -149,7 +136,7 @@ class ColumnWidths {
       this.apply(table,d,async (widths,index)=>{await this.plugin.app.vault.process(file,text=>{const lines=text.split('\n');if(lines[d.line]!==d.raw)return text;lines[d.line]=setWidths(d.raw,widths.map((w,i)=>i===index?w:null));return lines.join('\n');});});
     }
   }
-  destroy(){this.dead=true;this.observer.disconnect();this.resize.disconnect();this.style.remove();
+  destroy(){this.dead=true;this.observer.disconnect();this.resize.disconnect();
     for(const [table,r]of this.records){table.classList.remove('mte-width-table');if(r.originalStyle===null)table.removeAttribute('style');else table.setAttribute('style',r.originalStyle);table.querySelectorAll('.mte-width-grip,colgroup[data-mte-widths]').forEach(e=>e.remove());if(!r.hadScroll)r.parent.classList.remove('mte-width-scroll');}
   }
 }

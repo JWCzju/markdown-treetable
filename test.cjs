@@ -21,11 +21,18 @@ const { headerGroupChange } = require('./header-groups.cjs');
 const { continuationContexts } = require('./cell-outline-lines.cjs');
 const { fencedCell } = require('./cell-code-source.cjs');
 
-test('only complete fenced table cells decode into block source', () => {
+test('complete fenced blocks decode along with following cell content', () => {
   assert.equal(fencedCell('```mermaid<br>classDiagram<br>Animal <|-- Duck<br>```'),
     '```mermaid\nclassDiagram\nAnimal <|-- Duck\n```');
   assert.equal(fencedCell('~~~js<br>const n = 1;<br>~~~'), '~~~js\nconst n = 1;\n~~~');
-  for (const source of ['`inline`<br>text', '```js<br>missing close', 'before<br>```js<br>x<br>```', '```js<br>x<br>``']) {
+  assert.equal(fencedCell('```mermaid<br>graph LR<br>A-->B<br>```<br><br>- item<br>text'),
+    '```mermaid\ngraph LR\nA-->B\n```\n\n- item\ntext');
+  assert.equal(fencedCell('```js<br>one<br>```<br><br>'), '```js\none\n```\n\n');
+  assert.equal(fencedCell('```mermaid<br>graph LR<br>A-->B<br>```\n\n- item'),
+    '```mermaid\ngraph LR\nA-->B\n```\n\n- item');
+  assert.equal(fencedCell('123<br><br>```component<br>use: example.md#A<br>```<br><br>123'),
+    '123\n\n```component\nuse: example.md#A\n```\n\n123');
+  for (const source of ['`inline`<br>text', '```js<br>missing close', '```js<br>x<br>``', 'before<br>```js<br>x']) {
     assert.equal(fencedCell(source), null);
   }
 });

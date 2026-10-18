@@ -10,7 +10,7 @@ class CellCodeBlocks {
 
   attachEditor(view) {
     const cm = (view.currentMode || view.editMode)?.tableCell?.editor?.cm;
-    if (!cm || cm.state.doc.lines !== 1) return;
+    if (!cm) return;
     const source = cm.state.doc.toString();
     const multiline = fencedCell(source);
     if (!multiline) return;
@@ -34,16 +34,42 @@ class CellCodeBlocks {
         const source = fencedCell(model.rows[rowIndex].cells[col]);
         const host = cell.querySelector(':scope > .table-cell-wrapper, :scope > .mte-compact-body') || cell;
         const prior = this.previews.get(host);
-        if (!source || cell.querySelector('.cm-editor')) {
+        // Editors inside a rendered code processor belong to that processor,
+        // not to Obsidian's native table-cell editing state.
+        const nativeEditor = [...cell.querySelectorAll('.cm-editor')].some(editor => !editor.closest('.mte-codeblock-preview'));
+        if (!source || nativeEditor) {
           if (prior) this.remove(host, prior);
           continue;
         }
-        if (prior?.source === source && host.contains(prior.preview)) continue;
+        if (prior && host.contains(prior.preview) &&
+            (prior.source === source || prior.preview.dataset.mteCellSource === source)) {
+          // An interactive processor may already have patched its source and
+          // rendered itself. Retain its host and lifecycle during that gesture.
+          prior.source = source;
+          continue;
+        }
         if (prior) this.remove(host, prior);
+        // Native table updates replace wrappers. Transfer an exact-source preview
+        // before paint rather than unloading and asynchronously rendering it again.
+        const retained = [...this.previews].find(([oldHost, entry]) =>
+          (!oldHost.isConnected || !oldHost.contains(entry.preview)) &&
+          entry.preview.dataset.mteCellPath === (model.path || '') &&
+          entry.preview.dataset.mteCellSource === source);
+        if (retained) {
+          const [oldHost, entry] = retained;
+          entry.original = [...host.childNodes];
+          entry.source = source;
+          host.replaceChildren(entry.preview);
+          this.previews.delete(oldHost);
+          this.previews.set(host, entry);
+          continue;
+        }
         const component = new Component();
         component.load();
         const preview = document.createElement('div');
         preview.className = 'mte-codeblock-preview';
+        preview.dataset.mteCellSource = source;
+        preview.dataset.mteCellPath = model.path || '';
         const original = [...host.childNodes];
         host.replaceChildren(preview);
         const entry = {source, preview, original, component};

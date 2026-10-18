@@ -1,0 +1,29 @@
+{
+  "name": "@my/property-surface",
+  "version": "0.1.0",
+  "private": true,
+  "exports": {
+    "./markdown-editor": "./src/markdown-editor.js",
+    "./preview-source": "./src/preview-source.js",
+    "./list-indent": "./src/list-indent.js",
+    "./groups": "./src/groups.js",
+    "./group-toggle": "./src/group-toggle.js",
+    "./styles.css": "./styles.css"
+  },
+  "dependencies": {
+    "@lezer/markdown": "^1.6.3",
+    "@codemirror/commands": "^6.11.1",
+    "@codemirror/state": "^6.7.6",
+    "@codemirror/view": "^6.43.13"
+  },
+  "typesVersions": {
+    "*": {
+      "groups": [
+        "src/groups.d.ts"
+      ],
+      "group-toggle": [
+        "src/group-toggle.d.ts"
+      ]
+    }
+  }
+}

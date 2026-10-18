@@ -1,0 +1,403 @@
+.mte-table .mte-hidden { display: none !important; }
+
+body table.mte-table > tbody > tr:not(.mte-group) > td.mte-cell {
+  padding-right: 31px !important;
+}
+body table.mte-table .mte-row-detail-button {
+  position: absolute;
+  right: 4px;
+  top: 4px;
+  width: 22px;
+  height: 22px;
+  padding: 3px;
+  border: 0;
+  border-radius: 4px;
+  background: var(--background-primary);
+  color: var(--text-muted);
+  opacity: 0;
+  z-index: 3;
+}
+body table.mte-table .mte-row-detail-button svg { width: 16px; height: 16px; }
+body table.mte-table tr:hover .mte-row-detail-button,
+body table.mte-table .mte-row-detail-button:focus-visible { opacity: 1; }
+body table.mte-table .mte-row-detail-button:hover { color: var(--text-normal); background: var(--background-modifier-hover); }
+
+.mte-row-detail { min-height: 100%; color: var(--text-normal); }
+.mte-row-detail-header { padding: 30px 38px 18px; border-bottom: 1px solid var(--background-modifier-border); }
+.mte-row-detail-header h2 { margin: 0; padding-right: 50px; font-size: 22px; font-weight: 650; }
+.mte-row-detail-error { margin-top: 12px; color: var(--text-error); font-size: var(--font-smaller); }
+.mte-row-detail-body { padding: 22px 38px 60px; }
+.mte-row-detail-caption { padding: 2px 8px 10px; font-size: var(--font-ui-small); font-weight: 600; color: var(--text-normal); }
+.mte-row-detail-fields { width: 100%; }
+.mte-row-detail-value > input[type="checkbox"] { margin: 7px 8px; }
+
+body .markdown-source-view.mod-cm6 table.table-editor.mte-table > tbody > tr > td.mte-cell,
+body .markdown-preview-view table.mte-table > tbody > tr > td.mte-cell,
+body table.table-editor.mte-table > tbody > tr > td.mte-cell {
+  position: relative;
+  padding-left: calc(24px + var(--mte-inset, 0px) + var(--mte-indent, 0px)) !important;
+}
+
+.mte-table .mte-prefix { display: none; }
+.mte-table .mte-group-prefix { display: none; }
+/* Group labels live inside the native header cells, so editing keeps Obsidian's row mapping. */
+body table.mte-table > thead > tr.mte-grouped-header > th.mte-group-header-cell {
+  position: relative;
+  cursor: text;
+}
+body table.mte-table > thead > tr.mte-grouped-header > th.mte-group-header-cell > .table-cell-wrapper,
+body table.mte-table > thead > tr.mte-grouped-header > th.mte-group-header-cell > .mte-reading-cell {
+  margin-top: 28px !important;
+}
+body table.mte-table .mte-header-group-prefix,
+body table.mte-table .mte-header-group-break { display: none; }
+body table.mte-table .mte-column-group-label {
+  position: absolute;
+  top: 8px;
+  left: 12px;
+  right: 4px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-weight: 400;
+  text-align: left;
+  pointer-events: none;
+}
+body table.mte-table > thead > tr.mte-grouped-header > th.mte-group-header-cell:not(:first-child)::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -1px;
+  height: 28px;
+  width: 1px;
+  background: var(--background-modifier-border);
+  pointer-events: none;
+}
+body table.mte-table > tbody > tr.mte-group > td {
+  background: color-mix(in srgb, var(--mte-header-color, var(--background-secondary)) 50%, var(--background-primary));
+  border-top: 1px solid var(--background-modifier-border);
+  font-weight: 600;
+}
+
+body .mte-table button.mte-toggle {
+  position: absolute;
+  left: calc(5px + var(--mte-inset, 0px) + var(--mte-indent, 0px));
+  top: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  box-shadow: none;
+  color: color-mix(in srgb, var(--text-muted) 65%, var(--text-faint));
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+body .mte-table button.mte-toggle:hover { background: var(--background-modifier-hover); }
+body .mte-table button.mte-toggle svg { width: 16px; height: 16px; stroke-width: 3; }
+
+body table.mte-grouped > tbody > tr:not(.mte-group) { --mte-inset: 1.5em; }
+body table.mte-horizontal-only > tbody > tr { --mte-inset: 0 !important; }
+body table.mte-grouped > tbody > tr:not(.mte-group) > td:first-child {
+  position: relative;
+}
+/* Cover only the leading segment of object-row rules; retain native cells. */
+body table.mte-grouped > tbody > tr:not(.mte-group) > td:first-child::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: -1px;
+  bottom: -1px;
+  width: 1.5em;
+  background: var(--background-primary);
+  pointer-events: none;
+  z-index: 1;
+}
+body .markdown-source-view.mod-cm6 table.table-editor.mte-grouped > tbody > tr.mte-group > td:not(:last-child),
+body table.table-editor.mte-grouped > tbody > tr.mte-group > td:not(:last-child),
+body .markdown-preview-view table.mte-grouped > tbody > tr.mte-group > td:not(:last-child) {
+  border-right-style: hidden !important;
+}
+body .markdown-source-view.mod-cm6 table.table-editor.mte-grouped > tbody > tr.mte-group > td:not(:first-child),
+body table.table-editor.mte-grouped > tbody > tr.mte-group > td:not(:first-child),
+body .markdown-preview-view table.mte-grouped > tbody > tr.mte-group > td:not(:first-child) {
+  border-left-style: hidden !important;
+}
+
+/* Experimental opt-in cell Markdown. Native cell editor remains the input owner. */
+.mte-outline-preview-line { white-space: pre-wrap; }
+.mte-outline-marker:not(.mte-outline-ordered) { font-size: 0; }
+.mte-outline-marker:not(.mte-outline-ordered)::before { content: '• '; font-size: var(--font-text-size); color: var(--text-faint); }
+.mte-outline-editor .cm-formatting-list-ul { color: var(--text-faint); }
+.mte-outline-table .table-cell-wrapper { line-height: var(--line-height-normal); }
+
+/* Hanging indent: soft-wrapped lines align with the item's body, at every depth. */
+.mte-outline-preview-line, .mte-outline-editor .mte-outline-edit-line {
+  display: block;
+  padding-inline-start: calc(var(--mte-outline-indent, 0em) + 1.2em) !important;
+  text-indent: -1.2em !important;
+}
+.mte-outline-preview-line + br { display: none; }
+.mte-outline-table td:not(.mte-cell) { padding-left: 12px !important; }
+.mte-outline-preview-line, .mte-outline-edit-line { position:relative; }
+button.mte-outline-arrow {
+  position:absolute; left:calc(var(--mte-outline-indent, 0em) - 12px); top:2px;
+  display:inline-flex; align-items:center; justify-content:center;
+  width:12px; height:20px; padding:0; margin:0;
+  border:0; box-shadow:none; background:transparent; color:var(--text-muted);
+  cursor:pointer; text-indent:0; z-index:2;
+}
+button.mte-outline-arrow svg { width:12px; height:12px; }
+button.mte-outline-arrow:hover { color:var(--text-normal); background:var(--background-modifier-hover); }
+.mte-codeblock-preview { max-width:100%; overflow:auto; }
+.mte-codeblock-preview > :first-child { margin-top:0; }
+.mte-codeblock-preview > :last-child { margin-bottom:0; }
+.mte-outline-editor, .mte-outline-editor .cm-scroller, .mte-outline-editor .cm-content { overflow:visible !important; }
+.mte-outline-marker:not(.mte-outline-ordered) {
+  display: inline-block;
+  width: 1.2rem;
+  text-indent: 0;
+  white-space: nowrap;
+  font-size: 0 !important;
+}
+.mte-outline-marker:not(.mte-outline-ordered) span { font-size: 0 !important; }
+.mte-outline-marker .cm-hmd-list-indent { display: none; }
+.mte-outline-marker:not(.mte-outline-ordered)::before {
+  display: inline-block;
+  width: 1.2rem;
+  text-indent: 0;
+}
+
+.mte-outline-bullet-widget { display:inline-block; width:1.2em; text-indent:0; color:var(--text-faint); }
+.mte-outline-editor .cm-line { line-height:var(--line-height-normal); }
+
+.mte-task-box { width: 1em; height: 1em; margin: 0 .2em 0 0 !important; vertical-align: baseline; text-indent:0; cursor:pointer; }
+
+/* Match native task spacing and completed-task appearance. */
+.mte-outline-task { --mte-task-prefix: 1.35em;
+  padding-inline-start: calc(var(--mte-outline-indent, 0em) + var(--mte-task-prefix)) !important;
+  text-indent: calc(-1 * var(--mte-task-prefix)) !important;
+}
+.mte-outline-task .mte-task-box { margin-inline-end: .65em !important; }
+/* Match Obsidian list dots: use a geometric dot, not the font's bullet glyph. */
+.mte-outline-marker:not(.mte-outline-ordered)::before {
+  content:''; width:var(--list-bullet-size,.3em); height:var(--list-bullet-size,.3em);
+  border-radius:var(--list-bullet-radius,50%); background-color:var(--list-marker-color,var(--text-faint));
+  vertical-align:middle; margin-inline-start:.15rem;
+}
+.mte-outline-bullet-widget { font-size:0; width:1.2rem; }
+.mte-outline-bullet-widget::before {
+  content:''; display:inline-block; width:var(--list-bullet-size,4.8px); height:var(--list-bullet-size,4.8px);
+  border-radius:var(--list-bullet-radius,50%); background-color:var(--list-marker-color,var(--text-faint));
+  vertical-align:middle; margin-inline-start:.15rem;
+}
+
+/* Shared marker slot: native caret starts after the slot, including on empty tasks. */
+.mte-outline-preview-line, .mte-outline-editor .mte-outline-edit-line {
+  padding-inline-start: calc(var(--mte-outline-indent, 0em) + 1.35em) !important;
+  text-indent: -1.35em !important;
+  background-image: none !important;
+}
+.mte-task-slot, .mte-outline-bullet-widget, .mte-outline-marker:not(.mte-outline-ordered) {
+  display:inline-block; box-sizing:border-box; width:1.35em;
+  font-size:inherit !important; text-indent:0; vertical-align:baseline;
+}
+.mte-task-slot { line-height:inherit; }
+.mte-task-slot .mte-task-box { margin:0 !important; vertical-align:-.1em; }
+.mte-outline-marker:not(.mte-outline-ordered), .mte-outline-bullet-widget { color:transparent; position:relative; }
+.mte-outline-marker:not(.mte-outline-ordered)::before, .mte-outline-bullet-widget::before {
+  position:absolute; left:.15em; top:50%; transform:translateY(-50%); margin:0;
+}
+.mte-outline-editor .cm-indent::before, .mte-outline-editor .cm-indent::after { display:none !important; }
+
+/* Group headings: # / ## / ### map to one, two and three visual levels. */
+.mte-group .mte-group-prefix { display:none; }
+
+/* Keep rich embeds from changing a row's inline baseline while loading. */
+.mte-table .internal-embed.image-embed { display:inline-block; vertical-align:top; }
+.mte-table .internal-embed.image-embed img { max-width:100%; height:auto; vertical-align:top; }
+
+.mte-cell-fold-parent { cursor:pointer; }
+.mte-cell-fold-parent::before { content:''; display:inline-block; width:.34em; height:.34em; border-radius:50%; background:var(--text-faint); vertical-align:middle; margin-inline-end:.45em; }
+.mte-cell-fold-closed::before { background:var(--interactive-accent); box-shadow:0 0 0 .14em color-mix(in srgb,var(--interactive-accent) 18%,transparent); }
+/* Cell outliner visual baseline: one native-size marker, no guide rails or extra slot. */
+.mte-outline-preview-line { background-image:none !important; padding-inline-start:calc(var(--mte-outline-indent,0em) + 1.35em) !important; text-indent:-1.35em !important; }
+.mte-outline-preview-line.mte-outline-continuation { text-indent:0 !important; }
+.mte-outline-editor .mte-outline-edit-line.mte-outline-continuation { text-indent:0 !important; }
+.mte-outline-marker:not(.mte-outline-ordered), .mte-outline-bullet-widget { width:1.35em !important; font-size:0 !important; }
+.mte-outline-marker:not(.mte-outline-ordered)::before, .mte-outline-bullet-widget::before { content:'•' !important; position:static !important; transform:none !important; display:inline !important; width:auto !important; height:auto !important; margin:0 !important; color:var(--text-faint) !important; font-size:var(--font-text-size) !important; }
+.mte-cell-fold-parent::before { display:none !important; }
+.mte-cell-fold-closed .mte-outline-marker:not(.mte-outline-ordered)::before { color:var(--interactive-accent) !important; font-size:1.15em !important; }
+.mte-outline-task { padding-inline-start:calc(var(--mte-outline-indent,0em) + 1.35em) !important; text-indent:-1.35em !important; }
+.mte-task-slot { width:1.35em !important; }
+/* Final marker reset: never render a stretched pseudo element. */
+.mte-outline-marker:not(.mte-outline-ordered)::before,
+.mte-outline-bullet-widget::before { display:none !important; content:none !important; }
+.mte-outline-marker:not(.mte-outline-ordered) { width:1.35em !important; color:var(--text-faint) !important; font-size:var(--font-text-size) !important; position:static !important; }
+.mte-outline-preview-line.mte-cell-fold-closed .mte-outline-marker:not(.mte-outline-ordered) { color:var(--interactive-accent) !important; font-size:1.15em !important; }
+.mte-outline-preview-line.mte-cell-fold-parent { cursor:pointer; }
+/* Keep the live-preview editor marker visible while the cell is focused. */
+.mte-outline-editor .mte-outline-bullet-widget {
+  color: var(--text-faint) !important;
+  font-size: var(--font-text-size) !important;
+  width: 1.35em !important;
+  display: inline-block !important;
+}
+.mte-outline-editor .mte-outline-edit-line.mte-cell-fold-closed .mte-outline-bullet-widget {
+  color: var(--interactive-accent) !important;
+  font-size: 1.15em !important;
+}
+/* CodeMirror marks an actively folded subtree with its fold placeholder. */
+.mte-outline-editor .mte-outline-edit-line:has(.cm-foldPlaceholder) .mte-outline-bullet-widget {
+  color: var(--interactive-accent) !important;
+  font-size: 1.15em !important;
+  text-shadow: 0 0 0 var(--interactive-accent);
+}
+
+.mte-cell-fold-hidden { display:none !important; }
+
+.mte-outline-preview-line.mte-cell-fold-closed::after {
+  content: '\2026';
+  color: var(--text-faint);
+  font-size: 1.1em;
+  margin-inline: 8px 1px;
+  padding-inline: 1px;
+  text-decoration: none;
+}
+
+.mte-cell-fold-hit { cursor:pointer; user-select:none; }
+.mte-cell-fold-closed .mte-cell-fold-hit { color:var(--interactive-accent) !important; font-size:1.15em !important; }
+
+/* Rich inline embeds must not inherit the list's negative hanging indent. */
+.mte-outline-preview-line .internal-embed.image-embed,
+.mte-outline-edit-line .internal-embed.image-embed {
+  text-indent: 0 !important;
+  display: inline-block;
+  vertical-align: top;
+}
+
+.mte-reading-fold-parent { cursor:pointer; }
+.mte-reading-fold-parent.mte-reading-fold-closed::marker { color:var(--interactive-accent); font-size:1.25em; }
+/* Collapsed cell outliner marker mirrors the body outliner affordance. */
+.mte-outline-preview-line.mte-cell-fold-closed .mte-cell-fold-hit {
+  color: transparent !important;
+  font-size: 0 !important;
+  line-height: 1 !important;
+  display: inline-block !important;
+  box-sizing: border-box !important;
+  width: 1.35em !important;
+  height: 1.35em !important;
+  vertical-align: middle;
+  background: radial-gradient(circle, var(--interactive-accent) 0 .14em, color-mix(in srgb, var(--interactive-accent) 18%, transparent) .15em .25em, transparent .26em) !important;
+  border-radius: 0;
+  margin-inline: 0;
+}
+/* Cell rows use the point itself as the only affordance; suppress helper dots. */
+.mte-outline-preview-line.mte-cell-fold-parent::before,
+.mte-outline-edit-line.mte-cell-fold-parent::before { content:none !important; display:none !important; }
+.mte-outline-preview-line .mte-cell-fold-hit { position:relative; z-index:1; }
+
+/* One fixed marker slot, with a geometric dot independent of text glyphs. */
+.mte-outline-preview-line .mte-outline-marker:not(.mte-outline-ordered),
+.mte-outline-editor .mte-outline-bullet-widget {
+  display:inline-block !important; position:relative !important;
+  font-size:var(--font-text-size) !important; width:1.35em !important;
+  height:1em !important; vertical-align:baseline !important; line-height:1 !important;
+  color:transparent !important; text-shadow:none !important; text-indent:0 !important;
+  background:none !important; box-shadow:none !important; margin:0 !important;
+}
+.mte-outline-preview-line .mte-outline-marker:not(.mte-outline-ordered)::before,
+.mte-outline-editor .mte-outline-bullet-widget::before {
+  content:'' !important; display:block !important; position:absolute !important;
+  width:.4em !important; height:.4em !important;
+  left:.25em !important; top:.45em !important; transform:none !important;
+  border-radius:50% !important; background:var(--text-faint) !important; box-shadow:none !important;
+}
+.mte-outline-preview-line.mte-cell-fold-closed .mte-outline-marker::before,
+.mte-outline-editor .mte-outline-bullet-widget.mte-point-closed::before {
+  background:var(--interactive-accent) !important;
+  box-shadow:0 0 0 4px var(--background-modifier-active-hover) !important;
+}
+.mte-outline-editor .mte-point-toggle { cursor:pointer; }
+
+.mte-outline-preview-line.mte-cell-fold-closed .mte-outline-marker.mte-cell-fold-hit,
+.mte-outline-editor .mte-outline-edit-line:has(.cm-foldPlaceholder) .mte-outline-bullet-widget {
+ color:transparent !important; font-size:var(--font-text-size) !important;
+ text-shadow:none !important; background:none !important; box-shadow:none !important;
+}
+
+.mte-outline-preview-line.mte-cell-fold-closed .mte-outline-marker:not(.mte-outline-ordered)::before,
+.mte-outline-editor .mte-outline-bullet-widget::before { font-size:var(--font-text-size) !important; }
+
+/* A real caption reserves its own space, never overlays the blank Markdown line. */
+.cm-table-widget:has(.mte-table-tools) { padding-top:0 !important; }
+.mte-table-tools { caption-side:top; text-align:left; height:32px; padding:0 0 8px; white-space:nowrap; }
+.mte-table-tools .mte-height-toggle { height:24px; width:28px; padding:3px; border:0; box-shadow:none; background:transparent; color:var(--text-muted); }
+.mte-table-tools .mte-height-toggle svg { width:16px; height:16px; }
+.mte-table-tools .mte-height-toggle[aria-pressed="true"] { color:var(--interactive-accent); background:var(--background-modifier-hover); }
+.mte-table-tools .mte-height-menu { height:24px; width:16px; padding:3px 0; border:0; box-shadow:none; background:transparent; color:var(--text-muted); vertical-align:top; }
+.mte-table-tools .mte-height-menu svg { width:12px; height:12px; }
+.mte-table-tools :is(.mte-height-toggle,.mte-height-menu):hover { background:var(--background-modifier-hover); }
+.mte-height-popover { position:fixed; z-index:1000; min-width:144px; padding:4px; border:1px solid var(--background-modifier-border); border-radius:6px; background:var(--background-primary); box-shadow:var(--shadow-s); }
+body .mte-height-popover button.mte-height-option { display:block; width:100%; padding:6px 10px; border:0; border-radius:4px; background:transparent; box-shadow:none; color:var(--text-normal); text-align:left; cursor:pointer; }
+body .mte-height-popover button.mte-height-option:hover { background:var(--background-modifier-hover); }
+body .mte-height-popover button.mte-height-option[aria-checked="true"] { color:var(--interactive-accent); background:var(--background-modifier-hover); }
+.mte-compact-summary { display:none; }
+.mte-compact :is(td,th):not(:has(.cm-editor)):not(.mte-compact-open) > :is(.table-cell-wrapper,.mte-compact-body) { display:none !important; }
+.mte-compact :is(td,th):not(:has(.cm-editor)):not(.mte-compact-open) > .mte-compact-summary { display:flex; overflow:hidden; line-height:var(--line-height-normal); }
+.mte-compact :is(td,th):has(.cm-editor) > .mte-compact-summary { display:none !important; }
+/* Bound ellipsis even before the user has assigned explicit column widths. */
+
+
+.mte-summary-text { min-width:0; overflow:hidden; white-space:nowrap; }
+.mte-compact[data-mte-row-height="1"] .mte-summary-text .mte-outline-preview-line { display:inline !important; padding-inline-start:0 !important; text-indent:0 !important; }
+.mte-compact[data-mte-row-height="1"] .mte-summary-text .mte-outline-preview-line:not(:last-child)::after { content:' '; white-space:pre; }
+.mte-compact[data-mte-row-height]:not([data-mte-row-height="1"]):not([data-mte-row-height="0"]) .mte-compact-summary { display:block !important; }
+.mte-compact[data-mte-row-height]:not([data-mte-row-height="1"]):not([data-mte-row-height="0"]) .mte-summary-text { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:var(--mte-height-lines); line-clamp:var(--mte-height-lines); white-space:normal; }
+.mte-compact[data-mte-row-height="2"] { --mte-height-lines:2; }
+.mte-compact[data-mte-row-height="4"] { --mte-height-lines:4; }
+.mte-compact[data-mte-row-height="6"] { --mte-height-lines:6; }
+.mte-compact[data-mte-row-height]:not([data-mte-row-height="0"]):not([data-mte-row-height="1"]) :is(td,th):has(.cm-editor) > .mte-compact-summary { display:none !important; }
+.mte-summary-ellipsis { display:none; flex:none; white-space:pre; color:var(--text-faint); }
+.mte-compact[data-mte-row-height="1"] .mte-summary-overflow > .mte-summary-ellipsis { display:inline; }
+/* Match the summary inset when the native cell editor mounts. */
+.mte-compact :is(td,th) .cm-content { padding-inline:0 !important; }
+
+.mte-compact :is(td,th) > .table-cell-wrapper:has(.cm-editor) { padding:0 !important; }
+
+/* Rich first-line projection: keep marker geometry, prevent wrapping, and
+   reserve room for the arrow that normally sits outside the outline line. */
+.mte-compact[data-mte-row-height="1"] .mte-summary-text:has(.mte-outline-arrow) { padding-inline-start:12px; }
+.mte-compact[data-mte-row-height="1"] .mte-summary-text > .mte-outline-preview-line { white-space:nowrap !important; }
+.mte-summary-text .mte-outline-preview-line.mte-cell-fold-closed::after { content:none; }
+.mte-summary-text .mte-task-body { white-space:nowrap; }
+
+/* Reading mode uses the same content box as the native Live Preview table. */
+.mte-table .mte-reading-cell { padding:4px 8px; line-height:var(--line-height-normal); }
+
+.mte-width-measure * { white-space:nowrap !important; max-width:none !important; }
+
+/* Column width presentation; geometry remains runtime-calculated. */
+.mte-width-scroll { overflow-x:auto!important; overflow-y:hidden!important; max-width:100%!important; padding-bottom:6px; }
+.cm-table-widget.mte-width-scroll > .table-wrapper { overflow:visible!important; }
+table.mte-width-table { display:table!important; table-layout:fixed!important; min-width:0!important; max-width:none!important; }
+table.mte-width-table :is(th,td) { box-sizing:border-box!important; min-width:0!important; max-width:none!important; overflow-wrap:anywhere!important; word-break:normal!important; white-space:normal!important; }
+table.mte-width-table .table-cell-wrapper { min-width:0!important; max-width:100%!important; overflow-wrap:anywhere!important; }
+table.mte-width-table img { max-width:100%!important; height:auto; }
+table.mte-width-table pre { max-width:100%; overflow-x:auto; white-space:pre; }
+table.mte-width-table th { position:relative; }
+.mte-width-grip { position:absolute; top:0; right:-4px; width:8px; cursor:col-resize; z-index:20; touch-action:none; border:0!important; background:transparent!important; padding:0!important; box-shadow:none!important; border-radius:0!important; }
+.mte-width-grip::after { content:""; position:absolute; left:3px; top:0; bottom:0; width:1px; background:transparent; }
+.mte-width-grip:hover::after,.mte-width-grip:focus-visible::after,.mte-width-grip.is-dragging::after { background:var(--interactive-accent); }
