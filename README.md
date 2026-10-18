@@ -1,10 +1,10 @@
-# TreeTable
+# Rich Markdown Tables
 
 **[English](README.md) | [简体中文](README.zh-CN.md)**
 
-TreeTable enhances native Markdown table syntax with foldable row groups, Outliner-style cell editing, and draggable column widths.
+Rich Markdown Tables enhances native Markdown table syntax with foldable row groups, Outliner-style cell editing, and draggable column widths.
 
-![TreeTable overview](https://raw.githubusercontent.com/JWCzju/markdown-treetable/main/tree-table-demo.gif)
+![Rich Markdown Tables overview](https://raw.githubusercontent.com/JWCzju/markdown-treetable/main/tree-table-demo.gif)
 
 ## Features
 
@@ -32,11 +32,11 @@ Copy this table to try it:
 | Release | Prepare notes |
 ```
 
-`# Travel` and `# Work` are groups; `> Accommodation` is a child record; `>> Tokyo` is a second-level child. The table remains understandable Markdown when TreeTable is disabled.
+`# Travel` and `# Work` are groups; `> Accommodation` is a child record; `>> Tokyo` is a second-level child. The table remains understandable Markdown when the plugin is disabled.
 
 ## Feature details
 
-TreeTable supports common Markdown content in cells, including lists, tasks, images, embeds, and fenced code blocks. When another enabled plugin provides an interactive code block, TreeTable preserves its display and leaves that block's lifecycle to the other plugin.
+Rich Markdown Tables supports common Markdown content in cells, including lists, tasks, images, embeds, and fenced code blocks. When another enabled plugin provides an interactive code block, it preserves that display and leaves the block's lifecycle to the other plugin.
 
 Columns without a manual width adapt to their content. You can drag a column to set its width; explicit width metadata can also be written in a header cell, for example `<!-- width=240 -->`. Row-height controls also work with ordinary Markdown tables.
 
@@ -49,7 +49,7 @@ For compact wide tables, use `# Group<br>Field` in a column header to create a h
 
 ## Pricing & Authors
 
-If TreeTable helps your workflow, you can support the author through [GitHub Sponsors](https://github.com/sponsors/JWCzju).
+If Rich Markdown Tables helps your workflow, you can support the author through [GitHub Sponsors](https://github.com/sponsors/JWCzju).
 
 ## License
 
