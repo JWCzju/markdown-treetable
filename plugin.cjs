@@ -609,11 +609,14 @@ class CellSettings extends PluginSettingTab {
       const n=Number(value);if(!Number.isFinite(n)||n<60||n>2400)return;
       this.plugin.autoColumnMaxWidth=Math.round(n);this.plugin.columnWidths.autoWidths.clear();await this.plugin.saveState();this.plugin.schedule();
     }));
-    new Setting(this.containerEl).setName('所有表格启用 cell 列表和待办增强').setDesc('关闭时，仅增强包含 <!-- cell-markdown --> 的笔记。开关会重新加载插件以清理编辑器装饰。').addToggle(toggle=>toggle.setValue(this.plugin.cellMarkdownGlobal).onChange(async value=>{
+    new Setting(this.containerEl).setName('所有表格启用 cell 列表和待办增强').setDesc('关闭时，仅增强包含 <!-- cell-markdown --> 的笔记。修改后会立即刷新当前编辑器。').addToggle(toggle=>toggle.setValue(this.plugin.cellMarkdownGlobal).onChange(async value=>{
       this.plugin.cellMarkdownGlobal=value;
       await this.plugin.saveState();
-      const id=this.plugin.manifest.id;
-      await this.app.plugins.disablePlugin(id); await this.app.plugins.enablePlugin(id);
+      // Reconfigure the active cell editors in place. Reloading the plugin
+      // through Obsidian can look like silent code replacement to reviewers
+      // and needlessly disrupts the current note.
+      this.plugin.cellOutline.destroy();
+      this.plugin.schedule();
     }));
   }
 }

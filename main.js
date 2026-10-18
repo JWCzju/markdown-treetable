@@ -4322,7 +4322,13 @@ var require_index_cjs4 = __commonJS({
       if (!link2) return false;
       let url = link2.url;
       if (url.length <= proto.length) return false;
-      url = url.replace(/\*+$/, "");
+      let urlEnd = url.length;
+      while (urlEnd > 0 && url.charCodeAt(urlEnd - 1) === 42) {
+        urlEnd--;
+      }
+      if (urlEnd !== url.length) {
+        url = url.slice(0, urlEnd);
+      }
       const fullUrl = state.md.normalizeLink(url);
       if (!state.md.validateLink(fullUrl)) return false;
       if (!silent) {
@@ -7819,12 +7825,11 @@ var CellSettings = class extends PluginSettingTab {
       await this.plugin.saveState();
       this.plugin.schedule();
     }));
-    new Setting(this.containerEl).setName("\u6240\u6709\u8868\u683C\u542F\u7528 cell \u5217\u8868\u548C\u5F85\u529E\u589E\u5F3A").setDesc("\u5173\u95ED\u65F6\uFF0C\u4EC5\u589E\u5F3A\u5305\u542B <!-- cell-markdown --> \u7684\u7B14\u8BB0\u3002\u5F00\u5173\u4F1A\u91CD\u65B0\u52A0\u8F7D\u63D2\u4EF6\u4EE5\u6E05\u7406\u7F16\u8F91\u5668\u88C5\u9970\u3002").addToggle((toggle) => toggle.setValue(this.plugin.cellMarkdownGlobal).onChange(async (value) => {
+    new Setting(this.containerEl).setName("\u6240\u6709\u8868\u683C\u542F\u7528 cell \u5217\u8868\u548C\u5F85\u529E\u589E\u5F3A").setDesc("\u5173\u95ED\u65F6\uFF0C\u4EC5\u589E\u5F3A\u5305\u542B <!-- cell-markdown --> \u7684\u7B14\u8BB0\u3002\u4FEE\u6539\u540E\u4F1A\u7ACB\u5373\u5237\u65B0\u5F53\u524D\u7F16\u8F91\u5668\u3002").addToggle((toggle) => toggle.setValue(this.plugin.cellMarkdownGlobal).onChange(async (value) => {
       this.plugin.cellMarkdownGlobal = value;
       await this.plugin.saveState();
-      const id = this.plugin.manifest.id;
-      await this.app.plugins.disablePlugin(id);
-      await this.app.plugins.enablePlugin(id);
+      this.plugin.cellOutline.destroy();
+      this.plugin.schedule();
     }));
   }
 };
