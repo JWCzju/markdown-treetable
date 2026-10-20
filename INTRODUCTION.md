@@ -1,8 +1,8 @@
-# Rich Treetable 产品介绍草稿
+# Rich TreeTable 产品介绍草稿
 
 ## 一句话
 
-Rich Treetable 把普通 Markdown 表格变成可折叠的树形记录表，同时保留 cell 内的 Markdown 富内容编辑。
+Rich TreeTable 把普通 Markdown 表格变成可折叠的树形记录表，同时保留 cell 内的 Markdown 富内容编辑。
 
 ## 为什么不是数据库
 
@@ -35,4 +35,4 @@ cell 可以继续包含列表、任务、图片、内部链接、嵌入和 fence
 
 ## 首版边界
 
-Rich Treetable 面向桌面 Obsidian。它提供稳定的树表展示和编辑；复杂的交互式 code block 由对应插件负责生命周期，本插件只负责把它作为 cell 内容交给 Obsidian 渲染链。
+Rich TreeTable 面向桌面 Obsidian。它提供稳定的树表展示和编辑；复杂的交互式 code block 由对应插件负责生命周期，本插件只负责把它作为 cell 内容交给 Obsidian 渲染链。

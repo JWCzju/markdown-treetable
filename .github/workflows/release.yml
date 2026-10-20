@@ -40,4 +40,4 @@ jobs:
         run: |
           gh release create "$GITHUB_REF_NAME" main.js manifest.json styles.css \
             --title "$GITHUB_REF_NAME" \
-            --notes "Rich Treetable $GITHUB_REF_NAME: foldable Markdown groups and nested records, rich cell editing, column resizing, compact row display, and in-place settings refresh."
+            --notes "Rich Rich TreeTable $GITHUB_REF_NAME: foldable Markdown groups and nested records, rich cell editing, column resizing, compact row display, and in-place settings refresh."
