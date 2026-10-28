@@ -1,10 +1,10 @@
-# Rich TreeTable
+# TreeTable
 
 **[English](README.md) | [简体中文](README.zh-CN.md)**
 
-Rich TreeTable 通过增强 Markdown 原生表格语法，提供表格行分组与折叠、单元格 Outliner 编辑和拖拽调宽能力。
+TreeTable 通过增强 Markdown 原生表格语法，提供表格行分组与折叠、单元格 Outliner 编辑和拖拽调宽能力。
 
-![Rich TreeTable 单行展示](https://raw.githubusercontent.com/JWCzju/markdown-treetable/main/tree-table-demo.gif)
+![TreeTable 单行展示](https://raw.githubusercontent.com/JWCzju/markdown-treetable/main/tree-table-demo.gif)
 
 ## 核心功能
 
@@ -36,7 +36,7 @@ Rich TreeTable 通过增强 Markdown 原生表格语法，提供表格行分组�
 
 ## 详细说明
 
-单元格支持常见 Markdown 内容，包括列表、任务、图片、嵌入和围栏代码块。如果其他已启用的插件提供交互式代码块，Rich TreeTable 会保留其显示，并将代码块的交互生命周期交给对应插件。
+单元格支持常见 Markdown 内容，包括列表、任务、图片、嵌入和围栏代码块。如果其他已启用的插件提供交互式代码块，TreeTable 会保留其显示，并将代码块的交互生命周期交给对应插件。
 
 未手动设置的列会根据内容自适应。你可以拖动列分隔线设置宽度，也可以在表头单元格中写入宽度元数据，例如 `<!-- width=240 -->`。行高控制也适用于普通 Markdown 表格。
 
@@ -44,7 +44,7 @@ Rich TreeTable 通过增强 Markdown 原生表格语法，提供表格行分组�
 
 ## 已知问题
 
-Rich TreeTable 面向桌面版 Obsidian，并使用 Obsidian 原生 Markdown 表格编辑器。
+TreeTable 面向桌面版 Obsidian，并使用 Obsidian 原生 Markdown 表格编辑器。
 
 - 暂不支持按树结构拖动记录或整组排序；移动时请在源码模式下连同子记录一起移动。
 - Advanced Tables 等会重写表格行的插件可能影响树标记或宽度元数据，建议先在副本中确认兼容性。
